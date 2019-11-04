@@ -267,7 +267,7 @@ int sendMESG(struct _osdg_client *client, const void *data, int size)
   build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(client));
   crypto_box_afternm(mesg->ciphertext - crypto_box_BOXZEROBYTES,
                      mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                     size + crypto_box_BOXZEROBYTES, nonce.value, client->beforenmData);
+                     size + crypto_box_BOXZEROBYTES, nonce.data, client->beforenmData);
 
   build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + size);
   mesg->nonce = nonce.value[2];
