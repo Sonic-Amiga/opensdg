@@ -123,11 +123,11 @@ struct packetMESG
 {
     struct packet_header header;
     unsigned long long nonce;
-    unsigned char ciphertext[1];
-    /* Ciphertext can (and will) be longer than this */
+    unsigned char ciphertext[0];
+    /* Ciphertext has arbitrary length; check full length of a packet */
 };
 
-#define MESG_CIPHERTEXT_SIZE(header) (PACKET_SIZE(header) - offsetof(struct packetMESG, ciphertext))
+#define MESG_CIPHERTEXT_SIZE(header) (PACKET_SIZE(header) - sizeof(struct packetMESG))
 
 #pragma pack()
 
