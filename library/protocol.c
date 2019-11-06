@@ -24,12 +24,6 @@ static inline void set_socket_error(struct _osdg_client *client)
     client->errorCode = WSAGetLastError();
 }
 
-static inline void set_sodium_error(struct _osdg_client *client, int code)
-{
-    client->errorKind = osdg_sodium_error;
-    client->errorCode = code;
-}
-
 static int receive_data(struct _osdg_client *client, unsigned char *buffer, int size)
 {
     int ret;
@@ -125,7 +119,7 @@ static void *decodeMESG(struct packet_header *header, struct _osdg_client *clien
                                   length + crypto_box_BOXZEROBYTES, nonce.data, client->beforenmData);
     if (res)
     {
-        set_sodium_error(client, res);
+        client->errorKind = osdg_decryption_error;
         return NULL;
     }
     else
@@ -167,8 +161,13 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
        * Decrement ciphertext pointer in order to get first crypto_box_BOXZEROBYTES
        * stripped. We will overwrite them later by copying public key and nonce.
        */
-      crypto_box(helo.ciphertext - crypto_box_BOXZEROBYTES, zeroMsg, sizeof(zeroMsg),
-                 nonce.data, client->serverPubkey, client->clientTempSecret);
+      res = crypto_box(helo.ciphertext - crypto_box_BOXZEROBYTES, zeroMsg, sizeof(zeroMsg),
+                       nonce.data, client->serverPubkey, client->clientTempSecret);
+      if (res)
+      {
+        client->errorKind = osdg_encryption_error;
+        return res;
+      }
 
       memcpy(helo.clientPubkey, client->clientTempPubkey, sizeof(helo.clientPubkey));
       helo.nonce = nonce.value[2];
@@ -192,7 +191,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
                             client->serverPubkey, client->clientTempSecret);
       if (res)
       {
-        set_sodium_error(client, res);
+        client->errorKind = osdg_decryption_error;
         return res;
       }
 
@@ -200,16 +199,26 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       LOG_KEY("Server cookie", cookie.cookie, sizeof(cookie.cookie));
 
       memcpy(client->serverCookie, cookie.cookie, sizeof(cookie.cookie));
-      crypto_box_beforenm(client->beforenmData, cookie.serverShortTermPubkey, client->clientTempSecret);
+      res = crypto_box_beforenm(client->beforenmData, cookie.serverShortTermPubkey, client->clientTempSecret);
+      if (res)
+      {
+        client->errorKind = osdg_encryption_error;
+        return res;
+      }
 
       /* Build the inner crypto box */
       memset(innerData.outerPad, 0, sizeof(innerData.outerPad) + sizeof(innerData.innerPad));
       memcpy(innerData.clientPubkey, client->clientTempPubkey, sizeof(innerData.clientPubkey));
 
       build_random_long_term_nonce(&nonce, "CurveCPV");
-      crypto_box(outerData.innerBox - crypto_box_BOXZEROBYTES, (unsigned char *)&innerData,
-                 sizeof(innerData), nonce.data,
-                 client->serverPubkey, client->clientSecret);
+      res = crypto_box(outerData.innerBox - crypto_box_BOXZEROBYTES, (unsigned char *)&innerData,
+                       sizeof(innerData), nonce.data,
+                       client->serverPubkey, client->clientSecret);
+      if (res)
+      {
+        client->errorKind = osdg_encryption_error;
+        return res;
+      }
 
       memset(outerData.outerPad, 0, sizeof(outerData.outerPad) + sizeof(outerData.innerPad));
       memcpy(outerData.clientPubkey, client->clientPubkey, sizeof(outerData.clientPubkey));
@@ -221,8 +230,14 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       build_header(&voch.header, CMD_VOCH, sizeof(voch));
 
       build_short_term_nonce(&nonce, "CurveCP-client-I", client_get_nonce(client));
-      crypto_box_afternm(voch.outerBox - crypto_box_BOXZEROBYTES, (unsigned char *)&outerData,
-                         sizeof(outerData), nonce.data, client->beforenmData);
+      res = crypto_box_afternm(voch.outerBox - crypto_box_BOXZEROBYTES, (unsigned char *)&outerData,
+                               sizeof(outerData), nonce.data, client->beforenmData);
+      if (res)
+      {
+        client->errorKind = osdg_encryption_error;
+        return res;
+      }
+
       memcpy(voch.cookie, client->serverCookie, sizeof(voch.cookie));
       voch.nonce = nonce.value[2];
 
@@ -275,16 +290,23 @@ int sendMESG(struct _osdg_client *client, const void *data, int size)
 {
   struct packetMESG *mesg = (struct packetMESG *)client->buffer;
   union curvecp_nonce nonce;
+  int res;
 
   memcpy(mesg->ciphertext, data, size);
 
   build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(client));
-  crypto_box_afternm(mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                     mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                     size + crypto_box_BOXZEROBYTES, nonce.data, client->beforenmData);
+  res = crypto_box_afternm(mesg->ciphertext - crypto_box_BOXZEROBYTES,
+                           mesg->ciphertext - crypto_box_BOXZEROBYTES,
+                           size + crypto_box_BOXZEROBYTES, nonce.data, client->beforenmData);
+  if (res)
+  {
+    client->errorKind = osdg_encryption_error;
+    return res;
+  }
 
   build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + size);
   mesg->nonce = nonce.value[2];
 
   return send_packet(&mesg->header, client);
 }
+

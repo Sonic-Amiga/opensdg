@@ -24,9 +24,10 @@ OSDG_API int osdg_client_connect_to_socket(osdg_client_t client, SOCKET s);
 
 enum osdg_error_kind
 {
-  osdg_no_error,
-  osdg_socket_error,
-  osdg_sodium_error
+  osdg_no_error,         /* Everything is OK */
+  osdg_socket_error,     /* Socket I/O error */
+  osdg_encryption_error, /* Sodium encryption error; should never happen */
+  osdg_decryption_error  /* Sodium decryption error; likely corrupted data */
 };
 
 OSDG_API enum osdg_error_kind osdg_client_get_error_kind(osdg_client_t client);

@@ -135,18 +135,20 @@ int main()
   else
   {
       enum osdg_error_kind kind = osdg_client_get_error_kind(client);
-      int code = osdg_client_get_error_code(client);
 
       switch (kind)
       {
       case osdg_socket_error:
-        printWSAError("Socket I/O error", code);
+        printWSAError("Socket I/O error", osdg_client_get_error_code(client));
         break;
-      case osdg_sodium_error:
-        printf("Libsodium error code %d\n", code);
+      case osdg_encryption_error:
+        printf("Libsodium encryption error\n");
+        break;
+      case osdg_decryption_error:
+        printf("Libsodium decryption error\n");
         break;
       default:
-        printf("Unknon error kind %d code %d\n", kind, code);
+        printf("Unknon error kind %d\n", kind);
         break;
       }
   }
