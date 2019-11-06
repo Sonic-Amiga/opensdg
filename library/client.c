@@ -1,5 +1,5 @@
 #include <sodium.h>
-#include <Winsock2.h>
+#include <string.h>
 
 #include "client.h"
 #include "logging.h"
@@ -56,7 +56,7 @@ void osdg_client_destroy(osdg_client_t client)
   free(client);
 }
 
-enum osdg_error_king osdg_client_get_error_kind(osdg_client_t client)
+enum osdg_error_kind osdg_client_get_error_kind(osdg_client_t client)
 {
   return client->errorKind;
 }

@@ -1,8 +1,22 @@
+#include <errno.h>
 #include <sodium.h>
+#include <string.h>
+#ifndef _WIN32
+#include <sys/socket.h>
+#endif
 
 #include "client.h"
 #include "logging.h"
 #include "protocol.h"
+
+#ifndef _WIN32
+
+static inline int WSAGetLastError(void)
+{
+  return errno;
+}
+
+#endif
 
 static inline void set_socket_error(struct _osdg_client *client)
 {

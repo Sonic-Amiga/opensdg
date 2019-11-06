@@ -1,9 +1,18 @@
 #include <locale.h>
 #include <stdio.h>
-#include <Winsock2.h>
+#include <string.h>
+#ifdef _WIN32
 #include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 
 #include "opensdg.h"
+
+#ifdef _WIN32
 
 static void printWSAError(const char *msg, int err)
 {
@@ -15,12 +24,12 @@ static void printWSAError(const char *msg, int err)
     LocalFree(str);
 }
 
-void printsockerr(const char *msg)
+static void printsockerr(const char *msg)
 {
   printWSAError(msg, WSAGetLastError());
 }
 
-void initSockets(void)
+static void initSockets(void)
 {
   WSADATA wsData;
   int err = WSAStartup(MAKEWORD(2, 2), &wsData);
@@ -31,6 +40,33 @@ void initSockets(void)
     exit(255);
   }
 }
+
+#else
+
+static void printWSAError(const char *msg, int err)
+{
+  fprintf(stderr, "%s: %s\n", msg, strerror(err));
+}
+
+static inline void printsockerr(const char *msg)
+{
+  perror(msg);
+}
+
+static inline int closesocket(int s)
+{
+  return close(s);
+}
+
+static inline void initSockets(void)
+{
+}
+
+static inline void WSACleanup(void)
+{
+}
+
+#endif
 
 int read_file(unsigned char *buffer, int size, const char *name)
 {
@@ -53,7 +89,8 @@ int main()
   osdg_key_t clientKey;
   osdg_client_t client;
   int r;
-	
+
+  /* This switches off DOS compatibility mode on Windows console */
   setlocale(LC_ALL, "");
   initSockets();
 
