@@ -211,8 +211,8 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       memcpy(innerData.clientPubkey, client->clientTempPubkey, sizeof(innerData.clientPubkey));
 
       build_random_long_term_nonce(&nonce, "CurveCPV");
-      res = crypto_box(outerData.innerBox - crypto_box_BOXZEROBYTES, (unsigned char *)&innerData,
-                       sizeof(innerData), nonce.data,
+      res = crypto_box(outerData.curvecp_vouch_inner - crypto_box_BOXZEROBYTES,
+                       (unsigned char *)&innerData, sizeof(innerData), nonce.data,
                        client->serverPubkey, client->clientSecret);
       if (res)
       {
@@ -220,18 +220,30 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
         return res;
       }
 
+      /* Now compose the outer data */
       memset(outerData.outerPad, 0, sizeof(outerData.outerPad) + sizeof(outerData.innerPad));
       memcpy(outerData.clientPubkey, client->clientPubkey, sizeof(outerData.clientPubkey));
-      outerData.nonce[0] = nonce.value[1];
-      outerData.nonce[1] = nonce.value[2];
-      outerData.extraData = 0;
+      outerData.nonce[0]      = nonce.value[1];
+      outerData.nonce[1]      = nonce.value[2];
+      /*
+       * License key is appended to VOCH packet in a form of key-value pair.
+       * Unlike MESG this is not protobuf, but a much simpler encoding.
+       * An empty license key is reported as all zeroes.
+       */
+      outerData.certStrType   = 1; /* string type ? */
+      outerData.certStrLength = sizeof(outerData.certStr);
+      memcpy(outerData.certStr, "certificate", sizeof(outerData.certStr));
+      outerData.valueType     = 0; /* byte array type ? */
+      outerData.valueLength   = sizeof(outerData.license);
+      memset(outerData.license, 0, sizeof(outerData.license));
 
       /* And now build the packet */
       build_header(&voch.header, CMD_VOCH, sizeof(voch));
 
       build_short_term_nonce(&nonce, "CurveCP-client-I", client_get_nonce(client));
-      res = crypto_box_afternm(voch.outerBox - crypto_box_BOXZEROBYTES, (unsigned char *)&outerData,
-                               sizeof(outerData), nonce.data, client->beforenmData);
+      res = crypto_box_afternm(voch.curvecp_vouch_outer - crypto_box_BOXZEROBYTES,
+                               (unsigned char *)&outerData, sizeof(outerData), nonce.data,
+                               client->beforenmData);
       if (res)
       {
         client->errorKind = osdg_encryption_error;
@@ -256,10 +268,9 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
        * then one more zero byte. Original mdglib gets a pointer to that byte and
        * calls some function by pointer, which performs some verification and
        * can return error, causing connection abort. This function also gets
-       * data, used to build VOCH field, which we call extraData. It gives a hint
-       * that these data are related.
-       * Perhaps this has something to do with license keys. We don't know and
-       * don't care.
+       * license key information.
+       * Perhaps this has something to do with license validation. We don't know
+       * and don't care.
        */
       _log(LOG_PROTOCOL, "Got REDY response (%d bytes):", length);
       Dump(payload, length);

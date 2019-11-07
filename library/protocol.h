@@ -42,6 +42,8 @@ static inline void build_header(struct packet_header *header, int cmd, int size)
   header->command = cmd;
 }
 
+#define ENCRYPTED_BOX(x) unsigned char x[sizeof(struct x) - crypto_box_BOXZEROBYTES]
+
 /*
  * Command and their full packet structures follow
  * The protocol is based on CurveCP (http://curvecp.org). It uses the same
@@ -68,16 +70,7 @@ struct packetHELO
 };
 
 #define CMD_COOK SWAP_4_BYTES('C', 'O', 'O', 'K') /* CurveCP cookie */
-struct packetCOOK
-{
-  struct packet_header header;
-  unsigned long long nonce[2];   /* Nonce value */
-  unsigned char ciphertext[144]; /* Encrypted struct curvecp_cookue */
-};
-
 #define curvecp_COOKIEBYTES 96
-
-/* Decrypted form of the COOK ciphertext */
 struct curvecp_cookie
 {
     unsigned char outerPad[crypto_box_BOXZEROBYTES];                /* Outer padding for crypto_box_open() */
@@ -86,34 +79,43 @@ struct curvecp_cookie
     unsigned char cookie[curvecp_COOKIEBYTES];                      /* Server cookie */
 };
 
-#define CMD_VOCH SWAP_4_BYTES('V', 'O', 'C', 'H') /* CurveCP voucher */
-struct packetVOCH
+struct packetCOOK
 {
   struct packet_header header;
-  unsigned char cookie[curvecp_COOKIEBYTES]; /* Server cookie */
-  unsigned long long nonce;                  /* Nonce value */
-  unsigned char outerBox[113];               /* Encrypted outer box */
-  /* The outer box can be longer, this is minimal length */
+  unsigned long long nonce[2];   /* Nonce value */
+  ENCRYPTED_BOX(curvecp_cookie); /* Encrypted struct curvecp_cookue */
 };
 
-/* Outer box data */
+
+#define CMD_VOCH SWAP_4_BYTES('V', 'O', 'C', 'H') /* CurveCP voucher */
+struct curvecp_vouch_inner
+{
+  unsigned char outerPad[crypto_box_BOXZEROBYTES];       /* Outer padding for crypto_box() */
+  unsigned char innerPad[crypto_box_BOXZEROBYTES];       /* Inner padding */
+  unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short-term public key */
+};
+
 struct curvecp_vouch_outer
 {
   unsigned char outerPad[crypto_box_BOXZEROBYTES];       /* Outer padding for crypto_box() */
   unsigned char innerPad[crypto_box_BOXZEROBYTES];       /* Inner padding */
   unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES]; /* Client long-term public key */
   unsigned long long nonce[2];
-  unsigned char innerBox[48];                            /* Encrypted inner box */
-  unsigned char extraData;
-  /* Encoded client properties follow (perhaps) */
+  ENCRYPTED_BOX(curvecp_vouch_inner);                    /* Encrypted inner box */
+  unsigned char certStrType;                             /* License certificate key-value pair */
+  unsigned char certStrLength;
+  unsigned char certStr[11];
+  unsigned char valueType;
+  unsigned char valueLength;
+  unsigned char license[128];
 };
 
-/* Inner box data */
-struct curvecp_vouch_inner
+struct packetVOCH
 {
-    unsigned char outerPad[crypto_box_BOXZEROBYTES];       /* Outer padding for crypto_box() */
-    unsigned char innerPad[crypto_box_BOXZEROBYTES];       /* Inner padding */
-    unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short-term public key */
+  struct packet_header header;
+  unsigned char cookie[curvecp_COOKIEBYTES]; /* Server cookie */
+  unsigned long long nonce;                  /* Nonce value */
+  ENCRYPTED_BOX(curvecp_vouch_outer);        /* Encrypted outer box */
 };
 
 /* These two packets share data format. The only difference is nonce prefix */
