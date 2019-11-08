@@ -17,7 +17,7 @@ typedef unsigned char osdg_key_t[32];
 
 typedef struct _osdg_client *osdg_client_t;
 
-OSDG_API osdg_client_t osdg_client_create(const osdg_key_t private_key);
+OSDG_API osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_pdu);
 OSDG_API void osdg_client_destroy(osdg_client_t client);
 
 OSDG_API int osdg_client_connect_to_socket(osdg_client_t client, SOCKET s);
@@ -27,7 +27,9 @@ enum osdg_error_kind
   osdg_no_error,         /* Everything is OK */
   osdg_socket_error,     /* Socket I/O error */
   osdg_encryption_error, /* Sodium encryption error; should never happen */
-  osdg_decryption_error  /* Sodium decryption error; likely corrupted data */
+  osdg_decryption_error, /* Sodium decryption error; likely corrupted data */
+  osdg_protocol_error,   /* Some invalid data has been received */
+  osdg_buffer_exceeded   /* Buffer size is not enough for incoming data */
 };
 
 OSDG_API enum osdg_error_kind osdg_client_get_error_kind(osdg_client_t client);

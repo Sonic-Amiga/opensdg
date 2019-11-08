@@ -101,7 +101,7 @@ int main()
       printf("Failed to load private key! Leaving uninitialized!\n");
   }
 
-  client = osdg_client_create(clientKey);
+  client = osdg_client_create(clientKey, 1536);
   if (!client)
   {
     printf("Failed to create client!\n");

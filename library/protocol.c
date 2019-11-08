@@ -91,6 +91,22 @@ int receive_packet(unsigned char *buffer, struct _osdg_client *client)
     if (ret)
         return ret;
 
+    if (header->magic != PACKET_MAGIC)
+    {
+      LOG(ERRORS, "Invalid packet received, wrong magic");
+      client->errorKind = osdg_protocol_error;
+      return -1;
+    }
+
+    size = PACKET_SIZE(header);
+    if (size > client->bufferSize)
+    {
+      LOG(ERRORS, "Buffer size of %u exceeded; packet size is %u",
+          client->bufferSize, size);
+      client->errorKind = osdg_buffer_exceeded;
+      return -1;
+    }
+
     size = PAYLOAD_SIZE(header);
     if (size == 0)
         return 0;
@@ -299,7 +315,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
 
 int sendMESG(struct _osdg_client *client, const void *data, int size)
 {
-  struct packetMESG *mesg = (struct packetMESG *)client->buffer;
+  struct packetMESG *mesg = client_get_buffer(client);
   union curvecp_nonce nonce;
   int res;
 
@@ -312,12 +328,15 @@ int sendMESG(struct _osdg_client *client, const void *data, int size)
   if (res)
   {
     client->errorKind = osdg_encryption_error;
-    return res;
+  }
+  else
+  {
+    build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + size);
+    mesg->nonce = nonce.value[2];
+    res = send_packet(&mesg->header, client);
   }
 
-  build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + size);
-  mesg->nonce = nonce.value[2];
-
-  return send_packet(&mesg->header, client);
+  client_put_buffer(client, mesg);
+  return res;
 }
 

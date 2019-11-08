@@ -1,10 +1,17 @@
 #ifndef _INTERNAL_CLIENT_H
 #define _INTERNAL_CLIENT_H
 
+#include <pthread.h>
+
 #include "opensdg.h"
 #include "protocol.h"
 
 #define BUFFER_SIZE 1536
+
+struct osdg_buffer
+{
+  struct osdg_buffer *next;
+};
 
 struct _osdg_client
 {
@@ -19,6 +26,9 @@ struct _osdg_client
   unsigned char        serverCookie[curvecp_COOKIEBYTES];
   unsigned char        beforenmData[crypto_box_BEFORENMBYTES];
   unsigned long long   nonce;
+  unsigned int         bufferSize;
+  struct osdg_buffer  *bufferQueue;
+  pthread_mutex_t      bufferMutex;
   unsigned char        buffer[BUFFER_SIZE];
 };
 
@@ -27,5 +37,8 @@ static inline unsigned long long client_get_nonce(struct _osdg_client *client)
   unsigned long long nonce = client->nonce++;
   return SWAP_64(nonce); /* Our protocol wants bigendian data */
 }
+
+void *client_get_buffer(struct _osdg_client *client);
+void client_put_buffer(struct _osdg_client *client, void *ptr);
 
 #endif
