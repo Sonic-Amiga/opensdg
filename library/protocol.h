@@ -175,4 +175,6 @@ void dump_key(const char *str, const unsigned char *key, unsigned int size);
   if (log_mask & LOG_PROTOCOL)  \
     dump_key(str, key, size);
 
+#define MSG_PROTOCOL_VERSION 1
+
 #endif
