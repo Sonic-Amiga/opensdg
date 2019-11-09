@@ -314,7 +314,7 @@ int blocking_loop(struct _osdg_client *client, unsigned int exitFlags)
 
         if (!protocolVer)
         {
-          LOG(ERRORS, "Failed to decode protobuf message type %u", payload->dataType);
+          LOG(ERRORS, "MSG_PROTOCOL_VERSION protobuf decoding error");
           client->errorKind = osdg_protocol_error;
           break;
         }
@@ -347,9 +347,27 @@ int blocking_loop(struct _osdg_client *client, unsigned int exitFlags)
         LOG(ERRORS, "Unexpected MSG_PROTOCOL_VERSION outside of handshake");
         /* Ignoring */
       }
+      else if (payload->dataType = MSG_PEER_REPLY)
+      {
+        PeerReply *reply = peer_reply__unpack(NULL, length, payload->data);
 
-      _log(LOG_PROTOCOL, "Got MESG type %u length %u bytes:", payload->dataType, length);
-      Dump(payload->data, length);
+        if (!reply)
+        {
+          LOG(ERRORS, "MSG_PEER_REPLY protobuf decoding error");
+          client->errorKind = osdg_protocol_error;
+          break;
+        }
+
+        /* TODO: Handle this */
+        LOG(PROTOCOL, "Connection 0x%x result %u\n", reply->id, reply->result);
+
+        peer_reply__free_unpacked(reply, NULL);
+      }
+      else
+      {
+        _log(LOG_PROTOCOL, "Unhandled MESG type %u length %u bytes:", payload->dataType, length);
+        Dump(payload->data, length);
+      }
     }
     else
     {

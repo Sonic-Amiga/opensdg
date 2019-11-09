@@ -32,7 +32,7 @@ int osdg_peer_connect(osdg_peer_t peer, osdg_key_t peerId, const char *protocol)
 
   LOG(PROTOCOL, "Connecting to %s:%s", peerIdStr, protocol);
 
-  request.unknown  = 0;
+  request.id       = 0xFE; /* TODO */
   request.peerid   = peerIdStr;
   request.protocol = (char *)protocol;
 
