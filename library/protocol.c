@@ -19,12 +19,6 @@ static inline int WSAGetLastError(void)
 
 #endif
 
-static inline void set_socket_error(struct _osdg_client *client)
-{
-    client->errorKind = osdg_socket_error;
-    client->errorCode = WSAGetLastError();
-}
-
 static int receive_data(struct _osdg_client *client, unsigned char *buffer, int size)
 {
     int ret;
@@ -360,6 +354,19 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
   } while (res >= 0);
 
   return res;
+}
+
+int sendTELL(struct _osdg_client *client)
+{
+    int res;
+    struct packet_header tell;
+    void *buffer;
+
+    LOG_KEY("Using public key", client->clientPubkey, sizeof(client->clientPubkey));
+    LOG_KEY("Using private key", client->clientSecret, crypto_box_SECRETKEYBYTES);
+
+    build_header(&tell, CMD_TELL, sizeof(tell));
+    return send_packet(&tell, client);
 }
 
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data)

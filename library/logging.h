@@ -1,9 +1,10 @@
 #ifndef _INTERNAL_LOGGING_H
 #define _INTERNAL_LOGGING_H
 
-#define LOG_ERRORS   0x01
-#define LOG_PROTOCOL 0x02
-#define LOG_DATA     0x04
+#define LOG_ERRORS     0x01
+#define LOG_CONNECTION 0x02
+#define LOG_PROTOCOL   0x04
+#define LOG_DATA       0x08
 
 extern unsigned int log_mask;
 

@@ -4,10 +4,6 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #endif
 
 #include "opensdg.h"
@@ -22,11 +18,6 @@ static void printWSAError(const char *msg, int err)
         NULL, err, LANG_USER_DEFAULT, (LPSTR)&str, 1, NULL);
     fprintf(stderr, "%s: %s\n", msg, str);
     LocalFree(str);
-}
-
-static void printsockerr(const char *msg)
-{
-  printWSAError(msg, WSAGetLastError());
 }
 
 static void initSockets(void)
@@ -46,16 +37,6 @@ static void initSockets(void)
 static void printWSAError(const char *msg, int err)
 {
   fprintf(stderr, "%s: %s\n", msg, strerror(err));
-}
-
-static inline void printsockerr(const char *msg)
-{
-  perror(msg);
-}
-
-static inline int closesocket(int s)
-{
-  return close(s);
 }
 
 static inline void initSockets(void)
@@ -82,10 +63,19 @@ int read_file(unsigned char *buffer, int size, const char *name)
     return 0;
 }
 
+/* Danfoss cloud servers */
+static const struct osdg_endpoint servers[] =
+{
+  {"77.66.11.90" , 443},
+  {"77.66.11.92" , 443},
+  {"5.179.92.180", 443},
+  {"5.179.92.182", 443},
+  {NULL, 0}
+};
+
 int main()
 {
   SOCKET s;
-  struct sockaddr_in sa;
   osdg_key_t clientKey;
   osdg_client_t client;
   int r;
@@ -108,26 +98,7 @@ int main()
     return 255;
   }
 
-  s = socket(PF_INET, SOCK_STREAM, 0);
-  if (s < 0)
-  {
-    printsockerr("Failed to create socket");
-    return 255;
-  }
-	
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(443);
-  inet_pton(AF_INET, "77.66.11.90", &sa.sin_addr);
-	
-  r = connect(s, (struct sockaddr *)&sa, sizeof(sa));
-  if (r < 0)
-  {
-    printsockerr("Failed to connect");
-    closesocket(s);
-    return 255;
-  }
-
-  r = osdg_client_connect_to_socket(client, s);
+  r = osdg_client_connect_to_server(client, servers);
   if (r == 0)
   {
       printf("Done\n");
@@ -153,7 +124,6 @@ int main()
       }
   }
 
-  closesocket(s);
   WSACleanup();
   osdg_client_destroy(client);
   return 0;

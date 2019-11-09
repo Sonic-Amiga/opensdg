@@ -1,6 +1,7 @@
 #ifndef _INTERNAL_CLIENT_H
 #define _INTERNAL_CLIENT_H
 
+#include "errno.h"
 #include <pthread.h>
 
 #include "opensdg.h"
@@ -31,6 +32,16 @@ struct _osdg_client
   pthread_mutex_t      bufferMutex;
   unsigned char        buffer[BUFFER_SIZE];
 };
+
+static inline void set_socket_error(struct _osdg_client *client)
+{
+  client->errorKind = osdg_socket_error;
+#ifdef _WIN32
+  client->errorCode = WSAGetLastError();
+#else
+  client->errorCode = errno;
+#endif
+}
 
 static inline unsigned long long client_get_nonce(struct _osdg_client *client)
 {

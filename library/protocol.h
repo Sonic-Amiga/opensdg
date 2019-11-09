@@ -210,6 +210,7 @@ int send_packet(struct packet_header *header, struct _osdg_client *client);
 int receive_packet(unsigned char *buffer, struct _osdg_client *client);
 int blocking_loop(unsigned char *buffer, struct _osdg_client *client);
 
+int sendTELL(struct _osdg_client *client);
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data);
 
 void dump_packet(const char *str, const struct packet_header *header);
