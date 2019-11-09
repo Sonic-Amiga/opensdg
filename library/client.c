@@ -205,6 +205,8 @@ void osdg_client_destroy(osdg_client_t client)
 {
   struct osdg_buffer *buffer, *next;
 
+  client_close_socket(client);
+
   for (buffer = client->bufferQueue; buffer; buffer = next)
   {
     next = buffer->next;
