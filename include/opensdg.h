@@ -44,4 +44,10 @@ enum osdg_error_kind
 OSDG_API enum osdg_error_kind osdg_client_get_error_kind(osdg_client_t client);
 OSDG_API int osdg_client_get_error_code(osdg_client_t client);
 
+typedef struct _osdg_peer *osdg_peer_t;
+
+OSDG_API osdg_peer_t osdg_peer_create(osdg_client_t client);
+OSDG_API void osdg_peer_destroy(osdg_peer_t peer);
+OSDG_API int osdg_peer_connect(osdg_peer_t peer, osdg_key_t peerId, const char *protocol);
+
 #endif

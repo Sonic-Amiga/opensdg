@@ -10,6 +10,8 @@
 
 #include "opensdg.h"
 
+#define MAX_PEERS 32
+
 #ifdef _WIN32
 
 static void printWSAError(const char *msg, int err)
@@ -50,6 +52,39 @@ static inline void WSACleanup(void)
 }
 
 #endif
+
+static int hexchar2bin(char c)
+{
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  else if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  else if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  else
+    return -1;
+}
+
+static int hex2bin(unsigned char *bin, unsigned int len, const char *hex)
+{
+  unsigned int i, j;
+
+  for (i = 0; i < len; i++)
+  {
+    int digit[2];
+
+    for (j = 0; j < 2; j++)
+    {
+      digit[j] = hexchar2bin(hex[i * 2 + j]);
+      if (digit[j] == -1)
+        return -1;
+    }
+
+    bin[i] = (digit[0] << 4) + digit[1];
+  }
+
+  return hex[len * 2] ? -1 : 0;
+}
 
 int read_file(unsigned char *buffer, int size, const char *name)
 {
@@ -120,6 +155,68 @@ static void *input_loop(void *arg)
   return NULL;
 }
 
+static osdg_peer_t peers[MAX_PEERS];
+static unsigned int num_peers = 0;
+
+static int get_peer_number(void)
+{
+  unsigned int i;
+
+  for (i = 0; i < num_peers; i++)
+  {
+    if (!peers[i])
+      return i;
+  }
+
+  return (num_peers == MAX_PEERS) ? -1 : num_peers;
+}
+
+static void connect_to_peer(osdg_client_t client, char *argStr)
+{
+  unsigned int idx = get_peer_number();
+  const char *arg;
+  osdg_key_t peerId;
+  const char *protocol;
+  osdg_peer_t peer;
+  int res;
+
+  if (idx == -1)
+  {
+    printf("Reached maximum number of connections\n");
+    return;
+  }
+
+  arg = getWord(&argStr);
+  if (hex2bin(peerId, sizeof(peerId), arg) != 0)
+  {
+    printf("Invalid peerID %s!\n", arg);
+    return;
+  }
+
+  arg = getWord(&argStr);
+  if (!arg[0])
+    arg = "dominion-1.0";
+
+  peer = osdg_peer_create(client);
+  if (!peer)
+  {
+    printf("Failed to create peer!\n");
+    return;
+  }
+
+  res = osdg_peer_connect(peer, peerId, arg);
+  if (res)
+  {
+    printf("Failed to start connection!\n");
+    osdg_peer_destroy(peer);
+  }
+
+  printf("Created connection #%u\n", idx);
+  peers[idx] = peer;
+  if (idx == num_peers)
+    num_peers++;
+}
+
 /* Danfoss cloud servers */
 static const struct osdg_endpoint servers[] =
 {
@@ -176,11 +273,18 @@ int main()
 
         cmd = getWord(&p);
 
+        if (!cmd[0])
+          continue;
+
         if (!strcmp(cmd, "help"))
         {
           printf("help              - this help\n"
                  "connect [peer Id] - connect to peer\n"
                  "quit              - end session\n");
+        }
+        else if (!strcmp(cmd, "connect"))
+        {
+          connect_to_peer(client, p);
         }
         else if (!strcmp(cmd, "quit"))
         {

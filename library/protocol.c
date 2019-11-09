@@ -10,15 +10,6 @@
 #include "protocol.h"
 #include "protocol.pb-c.h"
 
-#ifndef _WIN32
-
-static inline int WSAGetLastError(void)
-{
-  return errno;
-}
-
-#endif
-
 static int receive_data(struct _osdg_client *client, unsigned char *buffer, int size)
 {
     int ret;

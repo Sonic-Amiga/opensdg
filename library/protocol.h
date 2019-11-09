@@ -200,6 +200,8 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
 
 /* Message types */
 #define MSG_PROTOCOL_VERSION 1
+#define MSG_CONNECT_TO_PEER  10
+#define MSG_PEER_CONNECTION  11
 
 #define PROTOCOL_VERSION_MAGIC 0xF09D8CA8
 #define PROTOCOL_VERSION_MAJOR 1

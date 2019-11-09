@@ -17,7 +17,8 @@ if (${PROTOBUF} STREQUAL "PROTOBUF-NOTFOUND")
 endif (${PROTOBUF} STREQUAL "PROTOBUF-NOTFOUND")
 message("libprotobuf-c found in ${PROTOBUF}")
 
-set(LIBRARY_SOURCES client.c client.h logging.c logging.h protocol.c protocol.h)
+set(LIBRARY_SOURCES client.c client.h logging.c logging.h
+                    protocol.c protocol.h peer.c peer.h)
 set(PROTOBUF_SOURCES protocol.pb-c.c protocol.pb-c.h)
 
 add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
