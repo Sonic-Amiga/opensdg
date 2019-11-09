@@ -26,8 +26,10 @@ add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
 
 add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES})
 set_property(TARGET opensdg PROPERTY COMPILE_DEFINITIONS OPENSDG_BUILD)
+target_include_directories(opensdg PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
+
 if (NOT ${SODIUM_ROOT} STREQUAL "")
   target_include_directories(opensdg PRIVATE ${SODIUM_ROOT}/include)
 endif (NOT ${SODIUM_ROOT} STREQUAL "")
-target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
 

@@ -1,6 +1,7 @@
 #ifndef _INTERNAL_PROTOCOL_H
 #define _INTERNAL_PROTOCOL_H
 
+#include <string.h>
 #include "logging.h"
 
 /* All the data come in bigendian format */
@@ -118,20 +119,58 @@ struct packetVOCH
   ENCRYPTED_BOX(curvecp_vouch_outer);        /* Encrypted outer box */
 };
 
-/* These two packets share data format. The only difference is nonce prefix */
 #define CMD_REDY SWAP_4_BYTES('R', 'E', 'D', 'Y') /* READY response from the server */
-#define CMD_MESG SWAP_4_BYTES('M', 'E', 'S', 'G') /* General incoming message */
-struct packetMESG
+struct redy_payload
 {
-    struct packet_header header;
-    unsigned long long nonce;
-    unsigned char ciphertext[0];
-    /* Ciphertext has arbitrary length; check full length of a packet */
+  unsigned char outerPad[crypto_box_BOXZEROBYTES]; /* Outer padding for crypto_box() */
+  unsigned char innerPad[crypto_box_BOXZEROBYTES]; /* Inner padding */
+  unsigned char unknown[1];                        /* We get at least one byte of unknown value */
 };
 
-#define MESG_CIPHERTEXT_SIZE(header) (PACKET_SIZE(header) - sizeof(struct packetMESG))
+struct packetREDY
+{
+  struct packet_header header;
+  unsigned long long nonce;
+  ENCRYPTED_BOX(redy_payload);
+  /* Ciphertext can be longer; check full length of a packet */
+};
+
+#define CMD_MESG SWAP_4_BYTES('M', 'E', 'S', 'G') /* General incoming message */
+struct mesg_payload
+{
+  unsigned char  outerPad[crypto_box_BOXZEROBYTES]; /* Outer padding for crypto_box() */
+  unsigned char  innerPad[crypto_box_BOXZEROBYTES]; /* Inner padding */
+  unsigned short dataSize;                          /* Payload size plus 1 (size of "dataType"). Bigendian */
+  unsigned char  dataType;                          /* Message data type, see below */
+  unsigned char  data[0];                           /* Serialized data start here */
+};
+
+struct packetMESG
+{
+  struct packet_header header;
+  unsigned long long nonce;
+  ENCRYPTED_BOX(mesg_payload);
+  /* Ciphertext can be longer; check full length of a packet */
+};
+
+/*
+ * REDY and MESG share the same structure, just with different payloads
+ * and different nonce prefix, so this macro is applicable to both
+ */
+#define MESG_CIPHERTEXT_SIZE(header) (PACKET_SIZE(header) - offsetof(struct packetMESG, mesg_payload))
 
 #pragma pack()
+
+/* Shorthands to zero paddings */
+static inline void zero_pad(unsigned char *pad)
+{
+  memset(pad, 0, crypto_box_BOXZEROBYTES * 2);
+}
+
+static inline void zero_outer_pad(unsigned char *pad)
+{
+  memset(pad - crypto_box_BOXZEROBYTES, 0, crypto_box_BOXZEROBYTES);
+}
 
 /* CurveCP nonces. For convenience we represent them as three 64-bit values. */
 union curvecp_nonce
@@ -159,10 +198,19 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
     randombytes((unsigned char *)&nonce->value[1], 16);
 }
 
+/* Message types */
+#define MSG_PROTOCOL_VERSION 1
+
+#define PROTOCOL_VERSION_MAGIC 0xF09D8CA8
+#define PROTOCOL_VERSION_MAJOR 1
+#define PROTOCOL_VERSION_MINOR 0
+
 void build_header(struct packet_header *header, int cmd, int size);
 int send_packet(struct packet_header *header, struct _osdg_client *client);
 int receive_packet(unsigned char *buffer, struct _osdg_client *client);
 int blocking_loop(unsigned char *buffer, struct _osdg_client *client);
+
+int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data);
 
 void dump_packet(const char *str, const struct packet_header *header);
 void dump_key(const char *str, const unsigned char *key, unsigned int size);
@@ -174,7 +222,5 @@ void dump_key(const char *str, const unsigned char *key, unsigned int size);
 #define LOG_KEY(str, key, size) \
   if (log_mask & LOG_PROTOCOL)  \
     dump_key(str, key, size);
-
-#define MSG_PROTOCOL_VERSION 1
 
 #endif

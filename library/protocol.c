@@ -8,6 +8,7 @@
 #include "client.h"
 #include "logging.h"
 #include "protocol.h"
+#include "protocol.pb-c.h"
 
 #ifndef _WIN32
 
@@ -101,7 +102,7 @@ int receive_packet(unsigned char *buffer, struct _osdg_client *client)
     size = PACKET_SIZE(header);
     if (size > client->bufferSize)
     {
-      LOG(ERRORS, "Buffer size of %u exceeded; packet size is %u",
+      LOG(ERRORS, "Buffer size of %u exceeded; incoming packet size is %u",
           client->bufferSize, size);
       client->errorKind = osdg_buffer_exceeded;
       return -1;
@@ -119,20 +120,20 @@ int receive_packet(unsigned char *buffer, struct _osdg_client *client)
     return size;
 }
 
-static void *decodeMESG(struct packet_header *header, struct _osdg_client *client, const char *nonce_prefix)
+static void *decryptMESG(struct packet_header *header, struct _osdg_client *client, const char *nonce_prefix)
 {
     struct packetMESG *mesg = (struct packetMESG *)header;
+    unsigned char *payload = mesg->mesg_payload - crypto_box_BOXZEROBYTES;
     unsigned int length = MESG_CIPHERTEXT_SIZE(header);
     union curvecp_nonce nonce;
     int res;
 
     build_short_term_nonce(&nonce, nonce_prefix, mesg->nonce);
     /* This will overwrite header and nonce */
-    memset(mesg->ciphertext - crypto_box_BOXZEROBYTES, 0, crypto_box_BOXZEROBYTES);
+    zero_outer_pad(mesg->mesg_payload);
     /* We don't want to bother with malloc(), decrypt in place */
-    res = crypto_box_open_afternm(mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                                  mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                                  length + crypto_box_BOXZEROBYTES, nonce.data, client->beforenmData);
+    res = crypto_box_open_afternm(payload, payload, length + crypto_box_BOXZEROBYTES,
+                                  nonce.data, client->beforenmData);
     if (res)
     {
         client->errorKind = osdg_decryption_error;
@@ -140,7 +141,7 @@ static void *decodeMESG(struct packet_header *header, struct _osdg_client *clien
     }
     else
     {
-        return mesg->ciphertext;
+        return payload;
     }
 }
 
@@ -202,9 +203,9 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       build_long_term_nonce(&nonce, "CurveCPK", cook->nonce);
 
       /* Replace nonce with padding zeroes in place and decrypt the message */
-      memset(cook->nonce, 0, crypto_box_BOXZEROBYTES);
-      res = crypto_box_open((unsigned char *)&cookie, (unsigned char *)cook->nonce, 0xA0, nonce.data,
-                            client->serverPubkey, client->clientTempSecret);
+      zero_outer_pad(cook->curvecp_cookie);
+      res = crypto_box_open((unsigned char *)&cookie, cook->curvecp_cookie - crypto_box_BOXZEROBYTES,
+                            sizeof(cookie), nonce.data, client->serverPubkey, client->clientTempSecret);
       if (res)
       {
         client->errorKind = osdg_decryption_error;
@@ -223,7 +224,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       }
 
       /* Build the inner crypto box */
-      memset(innerData.outerPad, 0, sizeof(innerData.outerPad) + sizeof(innerData.innerPad));
+      zero_pad(innerData.outerPad);
       memcpy(innerData.clientPubkey, client->clientTempPubkey, sizeof(innerData.clientPubkey));
 
       build_random_long_term_nonce(&nonce, "CurveCPV");
@@ -237,7 +238,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       }
 
       /* Now compose the outer data */
-      memset(outerData.outerPad, 0, sizeof(outerData.outerPad) + sizeof(outerData.innerPad));
+      zero_pad(outerData.outerPad);
       memcpy(outerData.clientPubkey, client->clientPubkey, sizeof(outerData.clientPubkey));
       outerData.nonce[0]      = nonce.value[1];
       outerData.nonce[1]      = nonce.value[2];
@@ -273,8 +274,13 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
     }
     else if (header->command == CMD_REDY)
     {
-      unsigned int length = MESG_CIPHERTEXT_SIZE(header);
-      void *payload = decodeMESG(header, client, "CurveCP-server-R");
+      /*
+       * Decryption of REDY packet is identical to MESG with the only difference
+       * being nonce prefix
+       */
+      struct redy_payload *payload = decryptMESG(header, client, "CurveCP-server-R");
+      unsigned int length;
+      ProtocolVersion protocolVer;
 
       if (!payload)
         return -1;
@@ -288,21 +294,64 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
        * Perhaps this has something to do with license validation. We don't know
        * and don't care.
        */
-      _log(LOG_PROTOCOL, "Got REDY response (%d bytes):", length);
-      Dump(payload, length);
+      length = MESG_CIPHERTEXT_SIZE(header) - crypto_box_BOXZEROBYTES;
+      _log(LOG_PROTOCOL, "Got REDY response (%u bytes):", length);
+      Dump(payload->unknown, length);
 
-      return 0;
+      /* Now let's do protocol version handshake */
+      protocol_version__init(&protocolVer);
+      protocolVer.magic = PROTOCOL_VERSION_MAGIC;
+      protocolVer.major = PROTOCOL_VERSION_MAJOR;
+      protocolVer.minor = PROTOCOL_VERSION_MINOR;
+      /* TODO: Implement client properties */
+
+      res = sendMESG(client, MSG_PROTOCOL_VERSION, &protocolVer);
     }
     else if (header->command == CMD_MESG)
     {
-      unsigned int length = MESG_CIPHERTEXT_SIZE(header);
-      void *payload = decodeMESG(header, client, "CurveCP-server-M");
+      struct mesg_payload *payload = decryptMESG(header, client, "CurveCP-server-M");
+      unsigned int length;
 
       if (!payload)
         return -1;
 
-      _log(LOG_PROTOCOL, "Got MESG data (%d bytes):", length);
-      Dump(payload, length);
+      length = SWAP_16(payload->dataSize) - sizeof(payload->dataType);
+
+      if (payload->dataType == MSG_PROTOCOL_VERSION)
+      {
+        ProtocolVersion *protocolVer = protocol_version__unpack(NULL, length, payload->data);
+
+        if (!protocolVer)
+        {
+          LOG(ERRORS, "Failed to decode protobuf message type %u", payload->dataType);
+          client->errorKind = osdg_protocol_error;
+          return -1;
+        }
+
+        if (protocolVer->magic != PROTOCOL_VERSION_MAGIC)
+        {
+          LOG(ERRORS, "Incorrect protocol version magic 0x%08X", protocolVer->magic);
+          client->errorKind = osdg_protocol_error;
+          res = -1;
+        }
+        else if (protocolVer->major != PROTOCOL_VERSION_MAJOR || protocolVer->minor != PROTOCOL_VERSION_MINOR)
+        {
+          LOG(ERRORS, "Unsupported server protocol version %u.%u", protocolVer->major, protocolVer->minor);
+          client->errorKind = osdg_protocol_error;
+          return -1;
+        }
+        else
+        {
+          LOG(PROTOCOL, "Using protocol version %u.%u", protocolVer->major, protocolVer->minor);
+          res = 0;
+        }
+
+        protocol_version__free_unpacked(protocolVer, NULL);
+        return res;
+      }
+
+      _log(LOG_PROTOCOL, "Got MESG type %u length %u bytes:", payload->dataType, length);
+      Dump(payload->data, length);
     }
     else
     {
@@ -313,25 +362,43 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
   return res;
 }
 
-int sendMESG(struct _osdg_client *client, const void *data, int size)
+int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data)
 {
-  struct packetMESG *mesg = client_get_buffer(client);
+  int dataSize = protobuf_c_message_get_packed_size(data);
+  int packetSize = sizeof(struct packetMESG) + dataSize;
+  struct packetMESG *mesg;
+  struct mesg_payload *payload;
   union curvecp_nonce nonce;
   int res;
 
-  memcpy(mesg->ciphertext, data, size);
+  if (packetSize > client->bufferSize)
+  {
+    LOG(ERRORS, "Buffer size of %u exceeded; outgoing packet size is %u",
+        client->bufferSize, packetSize);
+    client->errorKind = osdg_buffer_exceeded;
+    return -1;
+  }
+
+  /* We will build and encrypt the box in place, so need only one buffer */
+  mesg = client_get_buffer(client);
+  payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
+
+  zero_pad(payload->outerPad);
+  payload->dataSize = SWAP_16(dataSize + sizeof(payload->dataType));
+  payload->dataType = dataType;
+  protobuf_c_message_pack(data, payload->data);
 
   build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(client));
-  res = crypto_box_afternm(mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                           mesg->ciphertext - crypto_box_BOXZEROBYTES,
-                           size + crypto_box_BOXZEROBYTES, nonce.data, client->beforenmData);
+  res = crypto_box_afternm((unsigned char *)payload, (unsigned char *)payload,
+                           sizeof(struct mesg_payload) + dataSize,
+                           nonce.data, client->beforenmData);
   if (res)
   {
     client->errorKind = osdg_encryption_error;
   }
   else
   {
-    build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + size);
+    build_header(&mesg->header, CMD_MESG, packetSize);
     mesg->nonce = nonce.value[2];
     res = send_packet(&mesg->header, client);
   }
