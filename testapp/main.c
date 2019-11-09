@@ -2,6 +2,7 @@
 #include <locale.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
 #include <ws2tcpip.h>
@@ -86,18 +87,18 @@ static int hex2bin(unsigned char *bin, unsigned int len, const char *hex)
   return hex[len * 2] ? -1 : 0;
 }
 
-int read_file(unsigned char *buffer, int size, const char *name)
+static int read_file(void *buffer, int size, const char *name)
 {
     FILE *f = fopen(name, "rb");
+    int res;
 
     if (!f)
       return -1;
 
-    if (fread(buffer, size, 1, f) != 1)
-      return -1;
+    res = fread(buffer, size, 1, f);
 
     fclose(f);
-    return 0;
+    return res == 1 ? 0 : -1;
 }
 
 static void print_client_error(osdg_client_t client)
@@ -140,6 +141,14 @@ const char *getWord(char **p)
   return buffer;
 }
 
+static void hexdump(unsigned char *data, unsigned int size)
+{
+  unsigned int i;
+
+  for (i = 0; i < size; i++)
+    printf("%02x", data[i]);
+}
+
 static pthread_t inputThread;
 
 static void *input_loop(void *arg)
@@ -153,6 +162,32 @@ static void *input_loop(void *arg)
     printf("Main loop exited normally\n");
 
   return NULL;
+}
+
+struct pairing_data
+{
+  osdg_key_t peerId;
+  char       description[256];
+};
+
+struct pairing_list
+{
+  unsigned int        count;
+  struct pairing_data data[MAX_PEERS];
+};
+
+static struct pairing_list pairings;
+
+static void list_pairings(void)
+{
+  unsigned int i;
+
+  for (i = 0; i < pairings.count; i++)
+  {
+    printf("%2d ", i);
+    hexdump(pairings.data[i].peerId, sizeof(osdg_key_t));
+    printf(" %s\n", pairings.data[i].description);
+  }
 }
 
 static osdg_peer_t peers[MAX_PEERS];
@@ -187,15 +222,31 @@ static void connect_to_peer(osdg_client_t client, char *argStr)
   }
 
   arg = getWord(&argStr);
-  if (hex2bin(peerId, sizeof(peerId), arg) != 0)
+  if (strlen(arg) == 64)
   {
-    printf("Invalid peerID %s!\n", arg);
-    return;
+    if (hex2bin(peerId, sizeof(peerId), arg) != 0)
+    {
+      printf("Invalid peerID %s!\n", arg);
+      return;
+    }
+  }
+  else
+  {
+    char *end;
+    unsigned int idx = strtoul(arg, &end, 10);
+
+    if (arg == end || idx >= pairings.count)
+    {
+      printf("Invalid peer index %s!\n", arg);
+      return;
+    }
+
+    memcpy(peerId, pairings.data[idx].peerId, sizeof(osdg_key_t));
   }
 
   arg = getWord(&argStr);
   if (!arg[0])
-    arg = "dominion-1.0";
+    arg = "dominion-1.0"; // Default to DEVISmart thermostat protocol
 
   peer = osdg_peer_create(client);
   if (!peer)
@@ -245,6 +296,10 @@ int main()
       printf("Failed to load private key! Leaving uninitialized!\n");
   }
 
+  r = read_file(&pairings, sizeof(pairings), "osdg_test_pairings.bin");
+  if (r)
+    pairings.count = 0;
+
   client = osdg_client_create(clientKey, 1536);
   if (!client)
   {
@@ -280,11 +335,20 @@ int main()
         {
           printf("help              - this help\n"
                  "connect [peer Id] - connect to peer\n"
+                 "list pairings     - list known pairings\n"
                  "quit              - end session\n");
         }
         else if (!strcmp(cmd, "connect"))
         {
           connect_to_peer(client, p);
+        }
+        else if (!strcmp(cmd, "list"))
+        {
+          cmd = getWord(&p);
+          if (!strcmp(cmd, "pairings"))
+            list_pairings();
+          else
+            printf("Unknown item %s", cmd);
         }
         else if (!strcmp(cmd, "quit"))
         {
