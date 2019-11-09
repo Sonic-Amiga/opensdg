@@ -46,29 +46,6 @@ osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_
   return client;
 }
 
-int osdg_client_connect_to_socket(osdg_client_t client, SOCKET s)
-{
-    int res;
-    struct packet_header tell;
-    void *buffer;
-
-    client->sock = s;
-
-    /* Send initial TELL command in order to start the process */
-    LOG_KEY("Public key", client->clientPubkey, sizeof(client->clientPubkey));
-    LOG_KEY("Private key", client->clientSecret, crypto_box_SECRETKEYBYTES);
-
-    build_header(&tell, CMD_TELL, sizeof(tell));
-    res = send_packet(&tell, client);
-    if (res != 0)
-        return res;
-
-    buffer = client_get_buffer(client);
-    res = blocking_loop(buffer, client);
-    client_put_buffer(client, buffer);
-    return res;
-}
-
 static int osdg_client_try_to_connect(struct _osdg_client *client, const struct osdg_endpoint *server)
 {
   struct addrinfo *addr, *ai;
@@ -182,15 +159,7 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
       if (res == 0)
       {
         /* The server seems to be OK */
-        void *buffer;
-
-        free(randomized);
-
-        buffer = client_get_buffer(client);
-        res = blocking_loop(buffer, client);
-        client_put_buffer(client, buffer);
-
-        return res;
+        return blocking_loop(client, EXIT_CONNECTION_DONE);
       }
       client_close_socket(client);
     }
@@ -199,6 +168,11 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
   free(randomized);
   client->errorKind = osdg_connection_failed;
   return -1;
+}
+
+int osdg_client_main_loop(osdg_client_t client)
+{
+  return blocking_loop(client, 0);
 }
 
 void osdg_client_destroy(osdg_client_t client)

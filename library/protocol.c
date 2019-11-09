@@ -139,8 +139,9 @@ static void *decryptMESG(struct packet_header *header, struct _osdg_client *clie
     }
 }
 
-int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
+int blocking_loop(struct _osdg_client *client, unsigned int exitFlags)
 {
+  void *buffer = client_get_buffer(client);
   int res;
 
   do
@@ -149,7 +150,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
 
     res = receive_packet(buffer, client);
     if (res < 0)
-      return res;
+      break;
 
     if (header->command == CMD_WELC)
     {
@@ -177,7 +178,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       if (res)
       {
         client->errorKind = osdg_encryption_error;
-        return res;
+        break;
       }
 
       memcpy(helo.clientPubkey, client->clientTempPubkey, sizeof(helo.clientPubkey));
@@ -203,7 +204,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       if (res)
       {
         client->errorKind = osdg_decryption_error;
-        return res;
+        break;
       }
 
       LOG_KEY("Short-term server pubkey", cookie.serverShortTermPubkey, sizeof(cookie.serverShortTermPubkey));
@@ -214,7 +215,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       if (res)
       {
         client->errorKind = osdg_encryption_error;
-        return res;
+        break;
       }
 
       /* Build the inner crypto box */
@@ -228,7 +229,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       if (res)
       {
         client->errorKind = osdg_encryption_error;
-        return res;
+        break;
       }
 
       /* Now compose the outer data */
@@ -258,7 +259,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       if (res)
       {
         client->errorKind = osdg_encryption_error;
-        return res;
+        break;
       }
 
       memcpy(voch.cookie, client->serverCookie, sizeof(voch.cookie));
@@ -276,8 +277,10 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       unsigned int length;
       ProtocolVersion protocolVer;
 
-      if (!payload)
-        return -1;
+      if (!payload) {
+        res = -1;
+        break;
+      }
 
       /*
        * REDY payload from DEVISmart cloud consists of 16 zeroes of padding and
@@ -307,7 +310,10 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
       unsigned int length;
 
       if (!payload)
-        return -1;
+      {
+        res = -1;
+        break;
+      }
 
       length = SWAP_16(payload->dataSize) - sizeof(payload->dataType);
 
@@ -319,7 +325,7 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
         {
           LOG(ERRORS, "Failed to decode protobuf message type %u", payload->dataType);
           client->errorKind = osdg_protocol_error;
-          return -1;
+          break;
         }
 
         if (protocolVer->magic != PROTOCOL_VERSION_MAGIC)
@@ -332,16 +338,23 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
         {
           LOG(ERRORS, "Unsupported server protocol version %u.%u", protocolVer->major, protocolVer->minor);
           client->errorKind = osdg_protocol_error;
-          return -1;
+          res = -1;
         }
         else
         {
           LOG(PROTOCOL, "Using protocol version %u.%u", protocolVer->major, protocolVer->minor);
-          res = 0;
+          res = 0; /* We're done with the handshake */
         }
 
         protocol_version__free_unpacked(protocolVer, NULL);
-        return res;
+
+        if (res)
+          break;
+        if (exitFlags & EXIT_CONNECTION_DONE)
+          break;
+
+        LOG(ERRORS, "Unexpected MSG_PROTOCOL_VERSION outside of handshake");
+        /* Ignoring */
       }
 
       _log(LOG_PROTOCOL, "Got MESG type %u length %u bytes:", payload->dataType, length);
@@ -353,14 +366,13 @@ int blocking_loop(unsigned char *buffer, struct _osdg_client *client)
     }
   } while (res >= 0);
 
+  client_put_buffer(client, buffer);
   return res;
 }
 
 int sendTELL(struct _osdg_client *client)
 {
-    int res;
     struct packet_header tell;
-    void *buffer;
 
     LOG_KEY("Using public key", client->clientPubkey, sizeof(client->clientPubkey));
     LOG_KEY("Using private key", client->clientSecret, crypto_box_SECRETKEYBYTES);

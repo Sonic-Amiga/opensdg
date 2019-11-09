@@ -208,7 +208,10 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
 void build_header(struct packet_header *header, int cmd, int size);
 int send_packet(struct packet_header *header, struct _osdg_client *client);
 int receive_packet(unsigned char *buffer, struct _osdg_client *client);
-int blocking_loop(unsigned char *buffer, struct _osdg_client *client);
+
+#define EXIT_CONNECTION_DONE 0x01
+
+int blocking_loop(struct _osdg_client *client, unsigned int exitFlags);
 
 int sendTELL(struct _osdg_client *client);
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data);

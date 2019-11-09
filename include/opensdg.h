@@ -27,6 +27,7 @@ OSDG_API osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned
 OSDG_API void osdg_client_destroy(osdg_client_t client);
 
 OSDG_API int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoint *servers);
+OSDG_API int osdg_client_main_loop(osdg_client_t client);
 
 enum osdg_error_kind
 {
