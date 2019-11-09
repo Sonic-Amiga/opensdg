@@ -34,7 +34,7 @@ int osdg_peer_connect(osdg_peer_t peer, osdg_key_t peerId, const char *protocol)
 
   request.unknown  = 0;
   request.peerid   = peerIdStr;
-  request.protocol = protocol;
+  request.protocol = (char *)protocol;
 
   return sendMESG(peer->client, MSG_CONNECT_TO_PEER, &request);
 }
