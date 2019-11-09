@@ -141,7 +141,7 @@ const char *getWord(char **p)
   return buffer;
 }
 
-static void hexdump(unsigned char *data, unsigned int size)
+static void hexdump(const unsigned char *data, unsigned int size)
 {
   unsigned int i;
 
@@ -204,6 +204,21 @@ static int get_peer_number(void)
   }
 
   return (num_peers == MAX_PEERS) ? -1 : num_peers;
+}
+
+static void list_peers(void)
+{
+  unsigned int i;
+
+  for (i = 0; i < num_peers; i++)
+  {
+    if (!peers[i])
+      continue;
+
+    printf("%2d ", i);
+    hexdump(osdg_peer_get_id(peers[i]), sizeof(osdg_key_t));
+    putchar('\n');
+  }
 }
 
 static void connect_to_peer(osdg_client_t client, char *argStr)
@@ -333,10 +348,11 @@ int main()
 
         if (!strcmp(cmd, "help"))
         {
-          printf("help              - this help\n"
-                 "connect [peer Id] - connect to peer\n"
-                 "list pairings     - list known pairings\n"
-                 "quit              - end session\n");
+          printf("help                   - this help\n"
+                 "connect [peer # or ID] - connect to peer by index or raw ID\n"
+                 "list pairings          - list known pairings\n"
+                 "list peers             - list current connections\n"
+                 "quit                   - end session\n");
         }
         else if (!strcmp(cmd, "connect"))
         {
@@ -347,6 +363,8 @@ int main()
           cmd = getWord(&p);
           if (!strcmp(cmd, "pairings"))
             list_pairings();
+          else if (!strcmp(cmd, "peers"))
+            list_peers();
           else
             printf("Unknown item %s", cmd);
         }

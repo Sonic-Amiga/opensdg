@@ -49,5 +49,6 @@ typedef struct _osdg_peer *osdg_peer_t;
 OSDG_API osdg_peer_t osdg_peer_create(osdg_client_t client);
 OSDG_API void osdg_peer_destroy(osdg_peer_t peer);
 OSDG_API int osdg_peer_connect(osdg_peer_t peer, osdg_key_t peerId, const char *protocol);
+OSDG_API const unsigned char *osdg_peer_get_id(osdg_peer_t peer);
 
 #endif

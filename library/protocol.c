@@ -7,6 +7,7 @@
 
 #include "client.h"
 #include "logging.h"
+#include "peer.h"
 #include "protocol.h"
 #include "protocol.pb-c.h"
 
@@ -350,6 +351,7 @@ int blocking_loop(struct _osdg_client *client, unsigned int exitFlags)
       else if (payload->dataType = MSG_PEER_REPLY)
       {
         PeerReply *reply = peer_reply__unpack(NULL, length, payload->data);
+        struct _osdg_peer *peer;
 
         if (!reply)
         {
@@ -358,8 +360,17 @@ int blocking_loop(struct _osdg_client *client, unsigned int exitFlags)
           break;
         }
 
-        /* TODO: Handle this */
-        LOG(PROTOCOL, "Connection 0x%x result %u\n", reply->id, reply->result);
+        peer = client_find_peer(client, reply->id);
+        if (peer)
+        {
+          /* TODO: It is theoretically possible to have peer destroyed by
+             this moment from within different thread. How to prevent that ? */
+          res = peer_handle_connect_reply(peer, reply);
+        }
+        else
+        {
+          LOG(ERRORS, "Received MSG_PEER_REPLY for nonexistent peer %u\n", reply->id);
+        }
 
         peer_reply__free_unpacked(reply, NULL);
       }

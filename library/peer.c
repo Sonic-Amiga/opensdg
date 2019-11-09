@@ -4,7 +4,6 @@
 #include "logging.h"
 #include "opensdg.h"
 #include "peer.h"
-#include "protocol.pb-c.h"
 
 osdg_peer_t osdg_peer_create(osdg_client_t client)
 {
@@ -14,11 +13,14 @@ osdg_peer_t osdg_peer_create(osdg_client_t client)
     return NULL;
 
   peer->client = client;
+  peer->id     = client_register_peer(client, peer);
+
   return peer;
 }
 
 void osdg_peer_destroy(osdg_peer_t peer)
 {
+  client_unregister_peer(peer->client, peer->id);
   free(peer);
 }
 
@@ -30,12 +32,25 @@ int osdg_peer_connect(osdg_peer_t peer, osdg_key_t peerId, const char *protocol)
   memcpy(peer->peerId, peerId, sizeof(osdg_key_t));
   sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peerId, sizeof(osdg_key_t));
 
-  LOG(PROTOCOL, "Connecting to %s:%s", peerIdStr, protocol);
+  LOG(PROTOCOL, "Peer[%u] connecting to %s:%s", peer->id, peerIdStr, protocol);
 
-  request.id       = 0xFE; /* TODO */
+  request.id       = peer->id;
   request.peerid   = peerIdStr;
   request.protocol = (char *)protocol;
 
   return sendMESG(peer->client, MSG_CONNECT_TO_PEER, &request);
+}
+
+const unsigned char *osdg_peer_get_id(osdg_peer_t peer)
+{
+  return peer->peerId;
+}
+
+int peer_handle_connect_reply(struct _osdg_peer *peer, PeerReply *reply)
+{
+  LOG(PROTOCOL, "Peer[%u] result %d\n", peer->id, reply->result);
+  /* TODO: Figure out what to do next. We need something more in order
+     to start receiving data */
+  return 0;
 }
 

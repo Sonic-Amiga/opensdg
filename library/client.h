@@ -7,8 +7,6 @@
 #include "opensdg.h"
 #include "protocol.h"
 
-#define BUFFER_SIZE 1536
-
 struct osdg_buffer
 {
   struct osdg_buffer *next;
@@ -30,7 +28,9 @@ struct _osdg_client
   unsigned int         bufferSize;
   struct osdg_buffer  *bufferQueue;
   pthread_mutex_t      bufferMutex;
-  unsigned char        buffer[BUFFER_SIZE];
+  struct _osdg_peer  **peers;                                       /* Table of all peers */
+  unsigned int         numPeers;                                    /* Number of entries in the table */
+  pthread_mutex_t      peersMutex;
 };
 
 static inline void set_socket_error(struct _osdg_client *client)
@@ -51,5 +51,9 @@ static inline unsigned long long client_get_nonce(struct _osdg_client *client)
 
 void *client_get_buffer(struct _osdg_client *client);
 void client_put_buffer(struct _osdg_client *client, void *ptr);
+
+unsigned int client_register_peer(struct _osdg_client *client, struct _osdg_peer *peer);
+void client_unregister_peer(struct _osdg_client *client, unsigned int id);
+struct _osdg_peer *client_find_peer(struct _osdg_client *client, unsigned int id);
 
 #endif

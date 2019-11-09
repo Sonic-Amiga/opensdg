@@ -7,6 +7,9 @@
 #include "protocol.h"
 #include "socket.h"
 
+/* Peers table increment */
+#define PEERS_CHUNK 64
+
 static inline void client_put_buffer_nolock(struct _osdg_client *client, struct osdg_buffer *buffer)
 {
   buffer->next = client->bufferQueue;
@@ -34,11 +37,17 @@ osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_
   client->clientSecret = private_key;
   client->bufferSize   = max_pdu;
   client->bufferQueue  = NULL;
+  client->numPeers     = PEERS_CHUNK;
 
   pthread_mutex_init(&client->bufferMutex, NULL);
+  pthread_mutex_init(&client->peersMutex, NULL);
+
   /* Prepare some buffers */
   for (i = 0; i < 3; i++)
     client_put_buffer_nolock(client, malloc(client->bufferSize));
+
+  /* Allocate peers table */
+  client->peers = calloc(client->numPeers, sizeof(void *));
 
   /* Compute the public key */
   crypto_scalarmult_base(client->clientPubkey, private_key);
@@ -224,5 +233,50 @@ void client_put_buffer(struct _osdg_client *client, void *ptr)
   pthread_mutex_lock(&client->bufferMutex);
   client_put_buffer_nolock(client, ptr);
   pthread_mutex_unlock(&client->bufferMutex);
+}
+
+unsigned int client_register_peer(struct _osdg_client *client, struct _osdg_peer *peer)
+{
+  unsigned int i;
+
+  pthread_mutex_lock(&client->peersMutex);
+
+  for (i = 0; i < client->numPeers; i++)
+  {
+    if (!client->peers[i])
+      break;
+  }
+
+  if (i == client->numPeers)
+  {
+    unsigned int numPeers = client->numPeers + PEERS_CHUNK;
+
+    client->peers = realloc(client->peers, client->numPeers);
+    client->numPeers = numPeers;
+    memset(&client->peers[numPeers], 0, sizeof(void *) * PEERS_CHUNK);
+  }
+
+  client->peers[i] = peer;
+
+  pthread_mutex_unlock(&client->peersMutex);
+  return i;
+}
+
+void client_unregister_peer(struct _osdg_client *client, unsigned int id)
+{
+  pthread_mutex_lock(&client->peersMutex);
+  client->peers[id] = NULL;
+  pthread_mutex_unlock(&client->peersMutex);
+}
+
+struct _osdg_peer *client_find_peer(struct _osdg_client *client, unsigned int id)
+{
+  struct _osdg_peer *peer;
+
+  pthread_mutex_lock(&client->peersMutex);
+  peer = (id < client->numPeers) ? client->peers[id] : NULL;
+  pthread_mutex_unlock(&client->peersMutex);
+
+  return peer;
 }
 
