@@ -1,4 +1,6 @@
+#include <ctype.h>
 #include <locale.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #ifdef _WIN32
@@ -63,6 +65,61 @@ int read_file(unsigned char *buffer, int size, const char *name)
     return 0;
 }
 
+static void print_client_error(osdg_client_t client)
+{
+  enum osdg_error_kind kind = osdg_client_get_error_kind(client);
+
+  switch (kind)
+  {
+  case osdg_socket_error:
+    printWSAError("Socket I/O error", osdg_client_get_error_code(client));
+    break;
+  case osdg_encryption_error:
+    printf("Libsodium encryption error\n");
+    break;
+  case osdg_decryption_error:
+    printf("Libsodium decryption error\n");
+    break;
+  default:
+    printf("Unknon error kind %d\n", kind);
+    break;
+  }
+}
+
+const char *getWord(char **p)
+{
+  char *buffer = *p;
+  char *end;
+
+  for (end = buffer; *end; end++)
+  {
+    if (isspace(*end))
+    {
+      *end++ = 0;
+      while (isspace(*end))
+        end++;
+      break;
+    }
+  }
+  *p = end;
+  return buffer;
+}
+
+static pthread_t inputThread;
+
+static void *input_loop(void *arg)
+{
+  osdg_client_t client = arg;
+  int ret = osdg_client_main_loop(client);
+
+  if (ret)
+    print_client_error(client);
+  else
+    printf("Main loop exited normally\n");
+
+  return NULL;
+}
+
 /* Danfoss cloud servers */
 static const struct osdg_endpoint servers[] =
 {
@@ -101,27 +158,48 @@ int main()
   r = osdg_client_connect_to_server(client, servers);
   if (r == 0)
   {
-      printf("Done\n");
+    printf("Successfully connected\n");
+
+    r = pthread_create(&inputThread, NULL, input_loop, client);
+    if (!r)
+    {
+      printf("Enter command; \"help\" to get help\n");
+
+      for (;;)
+      {
+        char buffer[256];
+        char *p = buffer;
+        const char *cmd;
+
+        putchar('>');
+        fgets(buffer, sizeof(buffer), stdin);
+
+        cmd = getWord(&p);
+
+        if (!strcmp(cmd, "help"))
+        {
+          printf("help              - this help\n"
+                 "connect [peer Id] - connect to peer\n"
+                 "quit              - end session\n");
+        }
+        else if (!strcmp(cmd, "quit"))
+        {
+          break;
+        }
+        else
+        {
+          printf("Unknown command %s\n", cmd);
+        }
+      }
+    }
+    else
+    {
+      printf("Failed to start input thread!\n");
+    }
   }
   else
   {
-      enum osdg_error_kind kind = osdg_client_get_error_kind(client);
-
-      switch (kind)
-      {
-      case osdg_socket_error:
-        printWSAError("Socket I/O error", osdg_client_get_error_code(client));
-        break;
-      case osdg_encryption_error:
-        printf("Libsodium encryption error\n");
-        break;
-      case osdg_decryption_error:
-        printf("Libsodium decryption error\n");
-        break;
-      default:
-        printf("Unknon error kind %d\n", kind);
-        break;
-      }
+    print_client_error(client);
   }
 
   WSACleanup();
