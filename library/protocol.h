@@ -6,7 +6,8 @@
 
 /* All the data come in bigendian format */
 #define SWAP_4_BYTES(a, b, c, d) (((d) << 24) | ((c) << 16) | ((b) << 8) | (a))
-#define SWAP_16(val) ((((val) & 0xff) << 8) | ((val) >> 8))
+#define SWAP_16(val) (((((unsigned short)val) & 0xff) << 8) | \
+                      (((unsigned short)val) >> 8))
 #define SWAP_64(val) ((((val) & 0x00000000000000ffULL) << 56) | \
                       (((val) & 0x000000000000ff00ULL) << 40) | \
                       (((val) & 0x0000000000ff0000ULL) << 24) | \
@@ -36,7 +37,7 @@ struct packet_header
 /* Magic value */
 #define PACKET_MAGIC SWAP_4_BYTES(0xf0, 0x9f, 0x90, 0x9f)
 
-static inline void build_header(struct packet_header *header, int cmd, int size)
+static inline void build_header(struct packet_header *header, int cmd, size_t size)
 {
   header->size    = SWAP_16(size - 2);
   header->magic   = PACKET_MAGIC;
@@ -207,7 +208,7 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
 #define PROTOCOL_VERSION_MAJOR 1
 #define PROTOCOL_VERSION_MINOR 0
 
-void build_header(struct packet_header *header, int cmd, int size);
+void build_header(struct packet_header *header, int cmd, size_t size);
 int send_packet(struct packet_header *header, struct _osdg_client *client);
 int receive_packet(unsigned char *buffer, struct _osdg_client *client);
 

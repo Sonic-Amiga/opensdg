@@ -1,6 +1,11 @@
-#include <netdb.h>
 #include <sodium.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <WS2tcpip.h>
+#else
+#include <netdb.h>
+#endif
 
 #include "client.h"
 #include "logging.h"
@@ -95,7 +100,7 @@ static int osdg_client_try_to_connect(struct _osdg_client *client, const struct 
       return -1;
     }
 
-    res = connect(s, addr, ai->ai_addrlen);
+    res = connect(s, addr, (int)ai->ai_addrlen);
     if (res == 0)
     {
       LOG(CONNECTION, "Connected to %s:%u", server->host, server->port);
@@ -155,7 +160,7 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
     list[idx] = list[left];
   }
 
-  free(list);
+  free((void *)list);
 
   for (i = 0; i < nServers; i++)
   {
@@ -174,7 +179,7 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
     }
   }
 
-  free(randomized);
+  free((void *)randomized);
   client->errorKind = osdg_connection_failed;
   return -1;
 }

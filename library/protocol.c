@@ -73,7 +73,7 @@ int receive_packet(unsigned char *buffer, struct _osdg_client *client)
 {
     struct packet_header *header = (struct packet_header *)buffer;
     int ret = receive_data(client, buffer, sizeof(struct packet_header));
-    int size;
+    unsigned int size;
 
     if (ret)
         return ret;
@@ -103,7 +103,7 @@ int receive_packet(unsigned char *buffer, struct _osdg_client *client)
         return ret;
 
     LOG_PACKET("Received", header);
-    return size;
+    return 0;
 }
 
 static void *decryptMESG(struct packet_header *header, struct _osdg_client *client, const char *nonce_prefix)
@@ -403,8 +403,8 @@ int sendTELL(struct _osdg_client *client)
 
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data)
 {
-  int dataSize = protobuf_c_message_get_packed_size(data);
-  int packetSize = sizeof(struct packetMESG) + dataSize;
+  size_t dataSize = protobuf_c_message_get_packed_size(data);
+  size_t packetSize = sizeof(struct packetMESG) + dataSize;
   struct packetMESG *mesg;
   struct mesg_payload *payload;
   union curvecp_nonce nonce;

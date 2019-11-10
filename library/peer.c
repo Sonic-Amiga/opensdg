@@ -1,6 +1,7 @@
 #include <sodium.h>
 
 #include "client.h"
+#include "protocol.h"
 #include "logging.h"
 #include "opensdg.h"
 #include "peer.h"
@@ -53,4 +54,3 @@ int peer_handle_connect_reply(struct _osdg_peer *peer, PeerReply *reply)
      to start receiving data */
   return 0;
 }
-

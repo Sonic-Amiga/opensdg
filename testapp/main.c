@@ -1,15 +1,14 @@
 #include <ctype.h>
 #include <locale.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
-#include <ws2tcpip.h>
-#else
+#include <Winsock2.h>
 #endif
 
 #include "opensdg.h"
+#include "pthread_wrapper.h"
 
 #define MAX_PEERS 32
 
@@ -90,7 +89,7 @@ static int hex2bin(unsigned char *bin, unsigned int len, const char *hex)
 static int read_file(void *buffer, int size, const char *name)
 {
     FILE *f = fopen(name, "rb");
-    int res;
+    size_t res;
 
     if (!f)
       return -1;
@@ -226,7 +225,6 @@ static void connect_to_peer(osdg_client_t client, char *argStr)
   unsigned int idx = get_peer_number();
   const char *arg;
   osdg_key_t peerId;
-  const char *protocol;
   osdg_peer_t peer;
   int res;
 
@@ -295,7 +293,6 @@ static const struct osdg_endpoint servers[] =
 
 int main()
 {
-  SOCKET s;
   osdg_key_t clientKey;
   osdg_client_t client;
   int r;

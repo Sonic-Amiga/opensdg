@@ -1,8 +1,8 @@
 #ifndef _INTERNAL_CLIENT_H
 #define _INTERNAL_CLIENT_H
 
-#include "errno.h"
-#include <pthread.h>
+#include <errno.h>
+#include "pthread_wrapper.h"
 
 #include "opensdg.h"
 #include "protocol.h"
@@ -25,7 +25,7 @@ struct _osdg_client
   unsigned char        serverCookie[curvecp_COOKIEBYTES];
   unsigned char        beforenmData[crypto_box_BEFORENMBYTES];
   unsigned long long   nonce;
-  unsigned int         bufferSize;
+  size_t               bufferSize;
   struct osdg_buffer  *bufferQueue;
   pthread_mutex_t      bufferMutex;
   struct _osdg_peer  **peers;                                       /* Table of all peers */

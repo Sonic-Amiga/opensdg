@@ -1,7 +1,6 @@
 #ifdef _WIN32
 
 #include <WinSock2.h>
-#include <ws2tcpip.h>
 
 static inline char *sock_errstr(void)
 {
