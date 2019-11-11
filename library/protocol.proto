@@ -31,13 +31,13 @@ message PeerReply
   message PeerInfo
   {
     required string peerId = 3;
-    message ServerConnection
+    message ForwardHost
     {
       required string host = 1;
       required uint32 port = 2;
     }
-    required ServerConnection server = 4;
-    repeated uint32           unknown = 5;
+    required ForwardHost server  = 4;
+    required bytes       unknown = 5;
   }
   optional PeerInfo peer = 3;
 }

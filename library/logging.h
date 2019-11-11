@@ -13,6 +13,6 @@ extern unsigned int log_mask;
     _log(LOG_ ## mask, __VA_ARGS__)
 
 void _log(unsigned int mask, const char *format, ...);
-void Dump(const unsigned char *data, unsigned int len);
+void Dump(const unsigned char *data, size_t len);
 
 #endif

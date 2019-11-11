@@ -50,6 +50,14 @@ const unsigned char *osdg_peer_get_id(osdg_peer_t peer)
 int peer_handle_connect_reply(struct _osdg_peer *peer, PeerReply *reply)
 {
   LOG(PROTOCOL, "Peer[%u] result %d\n", peer->id, reply->result);
+  
+  if (reply->peer)
+  {
+      LOG(PROTOCOL, "Peer[%u] Forwarding ready at %s:%u", peer->id,
+          reply->peer->server->host, reply->peer->server->port);
+      _log(LOG_PROTOCOL, "Forwarding ticket is:");
+      Dump(reply->peer->unknown.data, reply->peer->unknown.len);
+  }
   /* TODO: Figure out what to do next. We need something more in order
      to start receiving data */
   return 0;

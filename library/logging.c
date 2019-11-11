@@ -17,7 +17,7 @@ void _log(unsigned int mask, const char *format, ...)
   va_end(ap);
 }
 
-void Dump(const unsigned char *data, unsigned int length)
+void Dump(const unsigned char *data, size_t length)
 {
   unsigned int i;
 

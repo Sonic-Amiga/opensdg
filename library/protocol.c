@@ -355,9 +355,9 @@ int blocking_loop(struct _osdg_client *client, unsigned int exitFlags)
 
         if (!reply)
         {
-          LOG(ERRORS, "MSG_PEER_REPLY protobuf decoding error");
-          client->errorKind = osdg_protocol_error;
-          break;
+          _log(LOG_ERRORS, "MSG_PEER_REPLY protobuf decoding error");
+          Dump(payload->data, length);
+          continue;
         }
 
         peer = client_find_peer(client, reply->id);
