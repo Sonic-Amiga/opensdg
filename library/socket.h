@@ -1,20 +1,9 @@
+#ifndef INTERNAL_SOCKET_H
+#define INTERNAL_SOCKET_H
+
 #ifdef _WIN32
 
 #include <WinSock2.h>
-
-static inline char *sock_errstr(void)
-{
-  char *str;
-
-  FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                 NULL, WSAGetLastError(), LANG_USER_DEFAULT, (LPSTR)&str, 1, NULL);
-  return str;
-}
-
-static inline void free_errstr(char *str)
-{
-  LocalFree(str);
-}
 
 #else
 
@@ -29,15 +18,20 @@ static inline int closesocket(int s)
   return close(s);
 }
 
-static inline char *sock_errstr(void)
+static inline int ioctlsocket(int s, unsigned long request, unsigned long *arg)
 {
-  return strerror(errno);
+    return ioctl(s, request, arg);
 }
 
-static inline void free_errstr(char *str)
+static inline int wouldblock(void)
 {
-  /* Nothing to do here */
+    return errno == EWOULDBLOCK;
 }
 
 #endif
 
+int try_to_connect(struct _osdg_client *client, const char *host, unsigned short port);
+int receive_data(struct _osdg_client *client);
+int send_data(const unsigned char *buffer, int size, struct _osdg_client *client);
+
+#endif

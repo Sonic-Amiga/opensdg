@@ -115,6 +115,20 @@ static void print_client_error(osdg_client_t client)
   case osdg_decryption_error:
     printf("Libsodium decryption error\n");
     break;
+  case osdg_protocol_error:
+    printf("Unrecoverable protocol error\n");
+    break;
+  case osdg_buffer_exceeded:
+    printf("Buffer overrun\n");
+    break;
+  case osdg_invalid_parameters:
+    printf("Invalid function call parameters\n");
+    break;
+  case osdg_connection_failed:
+    printf("Failed to connect to host\n");
+    /* Probably not legitimate, but good for internal diagnostics */
+    printWSAError("Last socket error", osdg_client_get_error_code(client));
+    break;
   default:
     printf("Unknon error kind %d\n", kind);
     break;
@@ -152,11 +166,10 @@ static pthread_t inputThread;
 
 static void *input_loop(void *arg)
 {
-  osdg_client_t client = arg;
-  int ret = osdg_client_main_loop(client);
+  int ret = osdg_main();
 
   if (ret)
-    print_client_error(client);
+    printf("Main loop exited with an error\n");
   else
     printf("Main loop exited normally\n");
 
@@ -322,7 +335,7 @@ int main()
   r = osdg_client_connect_to_server(client, servers);
   if (r == 0)
   {
-    printf("Successfully connected\n");
+    printf("Connection request sent, starting main loop\n");
 
     r = pthread_create(&inputThread, NULL, input_loop, client);
     if (!r)
@@ -385,7 +398,8 @@ int main()
     print_client_error(client);
   }
 
-  WSACleanup();
   osdg_client_destroy(client);
+  WSACleanup();
+
   return 0;
 }

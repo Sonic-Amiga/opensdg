@@ -1,14 +1,9 @@
 #include <sodium.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <WS2tcpip.h>
-#else
-#include <netdb.h>
-#endif
-
 #include "client.h"
 #include "logging.h"
+#include "mainloop.h"
 #include "protocol.h"
 #include "socket.h"
 
@@ -36,13 +31,14 @@ osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_
   if (!client)
     return NULL;
 
-  client->errorKind    = osdg_no_error;
-  client->errorCode    = 0;
-  client->nonce        = 0;
-  client->clientSecret = private_key;
-  client->bufferSize   = max_pdu;
-  client->bufferQueue  = NULL;
-  client->numPeers     = PEERS_CHUNK;
+  client->errorKind     = osdg_no_error;
+  client->errorCode     = 0;
+  client->nonce         = 0;
+  client->clientSecret  = private_key;
+  client->bufferSize    = max_pdu;
+  client->bufferQueue   = NULL;
+  client->receiveBuffer = NULL;
+  client->numPeers      = PEERS_CHUNK;
 
   pthread_mutex_init(&client->bufferMutex, NULL);
   pthread_mutex_init(&client->peersMutex, NULL);
@@ -60,80 +56,26 @@ osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_
   return client;
 }
 
-static int osdg_client_try_to_connect(struct _osdg_client *client, const struct osdg_endpoint *server)
+static void connection_shutdown(struct _osdg_client *client)
 {
-  struct addrinfo *addr, *ai;
-  int res;
-  SOCKET s;
-  
-  res = getaddrinfo(server->host, NULL, NULL, &addr);
-  if (res)
-  {
-    LOG(CONNECTION, "Failed to resolve %s: %s", server->host, gai_strerror(res));
-    return res;
-  }
+    unregister_connection(client);
 
-  res = -1;
-
-  for (ai = addr; ai; ai = ai->ai_next)
-  {
-    struct sockaddr *addr = ai->ai_addr;
-
-    if (addr->sa_family == AF_INET)
+    if (client->receiveBuffer)
     {
-      ((struct sockaddr_in *)addr)->sin_port = htons(server->port);
+        client_put_buffer(client, client->receiveBuffer);
+        client->receiveBuffer = NULL;
     }
-    else if (addr->sa_family == AF_INET6)
+
+    if (client->sock != -1)
     {
-      ((struct sockaddr_in6 *)addr)->sin6_port = htons(server->port);
+        closesocket(client->sock);
+        client->sock = -1;
     }
-    else
-    {
-      LOG(CONNECTION, "Ignoring unknown address family %u for host %s", addr->sa_family, server->host);
-      continue;
-    }
-
-    s = socket(addr->sa_family, SOCK_STREAM, 0);
-    if (s < 0)
-    {
-      set_socket_error(client);
-      return -1;
-    }
-
-    res = connect(s, addr, (int)ai->ai_addrlen);
-    if (res == 0)
-    {
-      LOG(CONNECTION, "Connected to %s:%u", server->host, server->port);
-      client->sock = s;
-      break;
-    }
-
-    if (log_mask & LOG_CONNECTION)
-    {      
-      char *err = sock_errstr();
-
-      _log(LOG_CONNECTION, "Failed to connect to %s:%u: %s", server->host, server->port, err);
-      free_errstr(err);
-    }
-
-    closesocket(s);
-  }
-
-  freeaddrinfo(addr);
-  return res;
-}
-
-static void client_close_socket(struct _osdg_client *client)
-{
-  if (client->sock != -1)
-  {
-    closesocket(client->sock);
-    client->sock = -1;
-  }
 }
 
 int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoint *servers)
 {
+  int res = -1;
   unsigned int nServers, left, i;
   const struct osdg_endpoint **list, **randomized;
 
@@ -164,36 +106,37 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
 
   for (i = 0; i < nServers; i++)
   {
-    int res = osdg_client_try_to_connect(client, randomized[i]);
+    res = try_to_connect(client, randomized[i]->host, randomized[i]->port);
 
-    if (res == 0)
+    if (res < 0)
+      break; /* Serious error, give up */
+
+    if (res == 1)
     {
-      /* Try to start the handshake */
+      register_connection(client);
+
       res = sendTELL(client);
-      if (res == 0)
-      {
-        /* The server seems to be OK */
-        return blocking_loop(client, EXIT_CONNECTION_DONE);
-      }
-      client_close_socket(client);
+      if (!res)
+        break;
+
+      connection_shutdown(client);
+      res = -1;
     }
   }
 
   free((void *)randomized);
-  client->errorKind = osdg_connection_failed;
-  return -1;
-}
 
-int osdg_client_main_loop(osdg_client_t client)
-{
-  return blocking_loop(client, 0);
+  if (res)
+    client->errorKind = osdg_connection_failed;
+
+  return res;
 }
 
 void osdg_client_destroy(osdg_client_t client)
 {
   struct osdg_buffer *buffer, *next;
 
-  client_close_socket(client);
+  connection_shutdown(client);
 
   for (buffer = client->bufferQueue; buffer; buffer = next)
   {
@@ -238,6 +181,25 @@ void client_put_buffer(struct _osdg_client *client, void *ptr)
   pthread_mutex_lock(&client->bufferMutex);
   client_put_buffer_nolock(client, ptr);
   pthread_mutex_unlock(&client->bufferMutex);
+}
+
+void connection_read_data(struct _osdg_client *conn)
+{
+    int ret;
+
+    if (!conn->receiveBuffer)
+    {
+        conn->receiveBuffer = client_get_buffer(conn);
+        conn->bytesLeft = 0;
+    }
+
+    ret = receive_packet(conn);
+    if (ret)
+    {
+        LOG(ERRORS, "Connection %p died", conn);
+        connection_shutdown(conn);
+        /* TODO: Implement some notification here */
+    }
 }
 
 unsigned int client_register_peer(struct _osdg_client *client, struct _osdg_peer *peer)

@@ -28,29 +28,18 @@ struct _osdg_client
   size_t               bufferSize;
   struct osdg_buffer  *bufferQueue;
   pthread_mutex_t      bufferMutex;
+  unsigned char       *receiveBuffer;
+  unsigned int         bytesReceived;
+  unsigned int         bytesLeft;
   struct _osdg_peer  **peers;                                       /* Table of all peers */
   unsigned int         numPeers;                                    /* Number of entries in the table */
   pthread_mutex_t      peersMutex;
 };
 
-static inline void set_socket_error(struct _osdg_client *client)
-{
-  client->errorKind = osdg_socket_error;
-#ifdef _WIN32
-  client->errorCode = WSAGetLastError();
-#else
-  client->errorCode = errno;
-#endif
-}
-
-static inline unsigned long long client_get_nonce(struct _osdg_client *client)
-{
-  unsigned long long nonce = client->nonce++;
-  return SWAP_64(nonce); /* Our protocol wants bigendian data */
-}
-
 void *client_get_buffer(struct _osdg_client *client);
 void client_put_buffer(struct _osdg_client *client, void *ptr);
+
+void connection_read_data(struct _osdg_client *conn);
 
 unsigned int client_register_peer(struct _osdg_client *client, struct _osdg_peer *peer);
 void client_unregister_peer(struct _osdg_client *client, unsigned int id);

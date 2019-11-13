@@ -31,7 +31,8 @@ message("libprotobuf-c found in ${PROTOBUF}")
 
 set(LIBRARY_SOURCES client.c client.h logging.c logging.h
                     protocol.c protocol.h peer.c peer.h
-					socket.h pthread_wrapper.h)
+					socket.c socket.h mainloop.c mainloop.h
+					pthread_wrapper.h)
 set(PROTOBUF_SOURCES protocol.pb-c.c protocol.pb-c.h)
 
 add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
