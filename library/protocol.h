@@ -213,20 +213,7 @@ void build_header(struct packet_header *header, int cmd, size_t size);
 int send_packet(struct packet_header *header, struct _osdg_client *client);
 int receive_packet(struct _osdg_client *client);
 
-#define EXIT_CONNECTION_DONE 0x01
-
 int sendTELL(struct _osdg_client *client);
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data);
-
-void dump_packet(const char *str, const struct packet_header *header);
-void dump_key(const char *str, const unsigned char *key, unsigned int size);
-
-#define LOG_PACKET(str, packet) \
-  if (log_mask & LOG_PROTOCOL)  \
-    dump_packet(str, packet);
-
-#define LOG_KEY(str, key, size) \
-  if (log_mask & LOG_PROTOCOL)  \
-    dump_key(str, key, size);
 
 #endif

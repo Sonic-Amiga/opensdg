@@ -55,8 +55,8 @@ int peer_handle_connect_reply(struct _osdg_peer *peer, PeerReply *reply)
   {
       LOG(PROTOCOL, "Peer[%u] Forwarding ready at %s:%u", peer->id,
           reply->peer->server->host, reply->peer->server->port);
-      _log(LOG_PROTOCOL, "Forwarding ticket is:");
-      Dump(reply->peer->unknown.data, reply->peer->unknown.len);
+      DUMP(PROTOCOL, reply->peer->unknown.data, reply->peer->unknown.len,
+           "Forwarding ticket is");
   }
   /* TODO: Figure out what to do next. We need something more in order
      to start receiving data */

@@ -12,25 +12,17 @@
 #include "protocol.h"
 #include "protocol.pb-c.h"
 
-void dump_packet(const char *str, const struct packet_header *header)
+static inline void dump_packet(const char *str, const struct packet_header *header)
 {
-    const char *buffer = (char *)header;
+    const unsigned char *buffer = (unsigned char *)header;
 
-    _log(LOG_PROTOCOL, "%s: %.4s", str, &header->command);
-    Dump(buffer + sizeof(struct packet_header), PAYLOAD_SIZE(header));
-}
-
-void dump_key(const char *str, const unsigned char *key, unsigned int size)
-{
-  char buffer[193];
-
-  sodium_bin2hex(buffer, sizeof(buffer), key, size);
-  _log(LOG_PROTOCOL, "%s: %s", str, buffer);
+    DUMP(PACKETS, buffer + sizeof(struct packet_header), PAYLOAD_SIZE(header),
+         "%s: %.4s", str, &header->command);
 }
 
 int send_packet(struct packet_header *header, struct _osdg_client *client)
 {
-    LOG_PACKET("Sending", header);
+    dump_packet("Sending", header);
     return send_data((const unsigned char *)header, PACKET_SIZE(header), client);
 }
 
@@ -107,7 +99,7 @@ int receive_packet(struct _osdg_client *client)
         return -1;
     }
 
-    LOG_PACKET("Received", header);
+    dump_packet("Received", header);
 
     if (header->command == CMD_WELC)
     {
@@ -118,8 +110,10 @@ int receive_packet(struct _osdg_client *client)
 
         memcpy(client->serverPubkey, welc->serverKey, sizeof(welc->serverKey));
         crypto_box_keypair(client->clientTempPubkey, client->clientTempSecret);
-        LOG_KEY("Created short-term public key", client->clientTempPubkey, sizeof(client->clientTempPubkey));
-        LOG_KEY("Created short-term secret key", client->clientTempSecret, sizeof(client->clientTempSecret));
+        DUMP(PROTOCOL, client->clientTempPubkey, sizeof(client->clientTempPubkey),
+             "Created short-term public key");
+        DUMP(PROTOCOL, client->clientTempSecret, sizeof(client->clientTempSecret),
+            "Created short-term secret key");
 
         build_short_term_nonce(&nonce, "CurveCP-client-H", client_get_nonce(client));
         memset(zeroMsg, 0, sizeof(zeroMsg));
@@ -164,8 +158,9 @@ int receive_packet(struct _osdg_client *client)
             return -1;
         }
 
-        LOG_KEY("Short-term server pubkey", cookie.serverShortTermPubkey, sizeof(cookie.serverShortTermPubkey));
-        LOG_KEY("Server cookie", cookie.cookie, sizeof(cookie.cookie));
+        DUMP(PROTOCOL, cookie.serverShortTermPubkey, sizeof(cookie.serverShortTermPubkey),
+             "Short-term server pubkey");
+        DUMP(PROTOCOL, cookie.cookie, sizeof(cookie.cookie), "Server cookie");
 
         memcpy(client->serverCookie, cookie.cookie, sizeof(cookie.cookie));
         ret = crypto_box_beforenm(client->beforenmData, cookie.serverShortTermPubkey, client->clientTempSecret);
@@ -247,8 +242,7 @@ int receive_packet(struct _osdg_client *client)
          * and don't care.
          */
         length = MESG_CIPHERTEXT_SIZE(header) - crypto_box_BOXZEROBYTES;
-        _log(LOG_PROTOCOL, "Got REDY response (%u bytes):", length);
-        Dump(payload->unknown, length);
+        DUMP(PROTOCOL, payload->unknown, length, "Got REDY response (%u bytes)", length);
 
         /* Now let's do protocol version handshake */
         protocol_version__init(&protocolVer);
@@ -311,8 +305,7 @@ int receive_packet(struct _osdg_client *client)
 
             if (!reply)
             {
-                _log(LOG_ERRORS, "MSG_PEER_REPLY protobuf decoding error");
-                Dump(payload->data, length);
+                DUMP(ERRORS, payload->data, length, "MSG_PEER_REPLY protobuf decoding error");
                 return 0; /* Ignore */
             }
 
@@ -332,8 +325,8 @@ int receive_packet(struct _osdg_client *client)
         }
         else
         {
-            _log(LOG_PROTOCOL, "Unhandled MESG type %u length %u bytes:", payload->dataType, length);
-            Dump(payload->data, length);
+            DUMP(PROTOCOL, payload->data, length,
+                 "Unhandled MESG type %u length %u bytes:", payload->dataType, length);
         }
     }
     else
@@ -348,8 +341,8 @@ int sendTELL(struct _osdg_client *client)
 {
     struct packet_header tell;
 
-    LOG_KEY("Using public key", client->clientPubkey, sizeof(client->clientPubkey));
-    LOG_KEY("Using private key", client->clientSecret, crypto_box_SECRETKEYBYTES);
+    DUMP(PROTOCOL, client->clientPubkey, sizeof(client->clientPubkey), "Using public key");
+    DUMP(PROTOCOL, client->clientSecret, crypto_box_SECRETKEYBYTES, "Using private key");
 
     build_header(&tell, CMD_TELL, sizeof(tell));
     return send_packet(&tell, client);
