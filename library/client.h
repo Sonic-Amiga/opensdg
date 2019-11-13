@@ -18,13 +18,12 @@ struct _osdg_client
   unsigned int         errorKind;
   unsigned int         errorCode;
   osdg_key_t           serverPubkey;                                /* Server's public key */
-  unsigned char        clientPubkey[crypto_box_PUBLICKEYBYTES];     /* Client's long term key pair */
-  const unsigned char *clientSecret;
   unsigned char        clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
   unsigned char        clientTempSecret[crypto_box_SECRETKEYBYTES];
   unsigned char        serverCookie[curvecp_COOKIEBYTES];
   unsigned char        beforenmData[crypto_box_BEFORENMBYTES];
   unsigned long long   nonce;
+  char                 haveBuffers;
   size_t               bufferSize;
   struct osdg_buffer  *bufferQueue;
   pthread_mutex_t      bufferMutex;
@@ -35,6 +34,10 @@ struct _osdg_client
   unsigned int         numPeers;                                    /* Number of entries in the table */
   pthread_mutex_t      peersMutex;
 };
+
+/* Client's long term key pair, global */
+extern unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
+extern unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
 
 void *client_get_buffer(struct _osdg_client *client);
 void client_put_buffer(struct _osdg_client *client, void *ptr);

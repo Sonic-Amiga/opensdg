@@ -102,12 +102,12 @@ static int read_file(void *buffer, int size, const char *name)
 
 static void print_client_error(osdg_client_t client)
 {
-  enum osdg_error_kind kind = osdg_client_get_error_kind(client);
+  enum osdg_error_kind kind = osdg_get_error_kind(client);
 
   switch (kind)
   {
   case osdg_socket_error:
-    printWSAError("Socket I/O error", osdg_client_get_error_code(client));
+    printWSAError("Socket I/O error", osdg_get_error_code(client));
     break;
   case osdg_encryption_error:
     printf("Libsodium encryption error\n");
@@ -127,7 +127,7 @@ static void print_client_error(osdg_client_t client)
   case osdg_connection_failed:
     printf("Failed to connect to host\n");
     /* Probably not legitimate, but good for internal diagnostics */
-    printWSAError("Last socket error", osdg_client_get_error_code(client));
+    printWSAError("Last socket error", osdg_get_error_code(client));
     break;
   default:
     printf("Unknon error kind %d\n", kind);
@@ -325,14 +325,20 @@ int main()
   if (r)
     pairings.count = 0;
 
-  client = osdg_client_create(clientKey, 1536);
+  if (osdg_init(clientKey))
+  {
+      printf("osdg_init() failed!\n");
+      return 255;
+  }
+
+  client = osdg_connection_create();
   if (!client)
   {
     printf("Failed to create client!\n");
     return 255;
   }
 
-  r = osdg_client_connect_to_server(client, servers);
+  r = osdg_connect_to_grid(client, servers);
   if (r == 0)
   {
     printf("Connection request sent, starting main loop\n");
@@ -398,7 +404,7 @@ int main()
     print_client_error(client);
   }
 
-  osdg_client_destroy(client);
+  osdg_connection_destroy(client);
   WSACleanup();
 
   return 0;

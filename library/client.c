@@ -10,32 +10,73 @@
 /* Peers table increment */
 #define PEERS_CHUNK 64
 
+/* Our key pair */
+unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
+unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
+
+int osdg_init(const osdg_key_t private_key)
+{
+    if (sodium_init() == -1)
+    {
+        LOG(ERRORS, "libsodium init failed");
+        return -1;
+    }
+
+    /* TODO: Move Winsock init here */
+
+    memcpy(clientSecret, private_key, sizeof(clientSecret));
+    /* Compute the public key */
+    crypto_scalarmult_base(clientPubkey, clientSecret);
+
+    return 0;
+}
+
 static inline void client_put_buffer_nolock(struct _osdg_client *client, struct osdg_buffer *buffer)
 {
   buffer->next = client->bufferQueue;
   client->bufferQueue = buffer;
 }
 
-osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_pdu)
+static inline int allocate_buffers(struct _osdg_client *conn)
 {
-  struct _osdg_client *client;
-  unsigned int i;
+    int i;
 
-  if (sodium_init() == -1)
-  {
-    LOG(ERRORS, "libsodium init failed");
-    return NULL;
-  }
+    if (conn->haveBuffers)
+        return 0;
 
-  client = malloc(sizeof(struct _osdg_client));
+    for (i = 0; i < 3; i++)
+    {
+        void *buffer = malloc(conn->bufferSize);
+
+        if (!buffer)
+        {
+            conn->errorKind = osdg_memory_error;
+            return -1;
+        }
+
+        client_put_buffer_nolock(conn, buffer);
+    }
+
+    conn->haveBuffers = 1;
+    return 0;
+}
+
+osdg_client_t osdg_connection_create(void)
+{
+  struct _osdg_client *client = malloc(sizeof(struct _osdg_client));
+  
   if (!client)
     return NULL;
 
   client->errorKind     = osdg_no_error;
   client->errorCode     = 0;
   client->nonce         = 0;
-  client->clientSecret  = private_key;
-  client->bufferSize    = max_pdu;
+  client->haveBuffers   = 0;
+  /*
+   * This buffer size is used by original mdglib from DEVISmart Android APK,
+   * so we're using it as a default.
+   */
+  client->bufferSize    = 1536;
   client->bufferQueue   = NULL;
   client->receiveBuffer = NULL;
   client->numPeers      = PEERS_CHUNK;
@@ -43,15 +84,8 @@ osdg_client_t osdg_client_create(const osdg_key_t private_key, unsigned int max_
   pthread_mutex_init(&client->bufferMutex, NULL);
   pthread_mutex_init(&client->peersMutex, NULL);
 
-  /* Prepare some buffers */
-  for (i = 0; i < 3; i++)
-    client_put_buffer_nolock(client, malloc(client->bufferSize));
-
   /* Allocate peers table */
   client->peers = calloc(client->numPeers, sizeof(void *));
-
-  /* Compute the public key */
-  crypto_scalarmult_base(client->clientPubkey, private_key);
 
   return client;
 }
@@ -73,10 +107,9 @@ static void connection_shutdown(struct _osdg_client *client)
     }
 }
 
-int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoint *servers)
+int osdg_connect_to_grid(osdg_client_t client, const struct osdg_endpoint *servers)
 {
-  int res = -1;
-  unsigned int nServers, left, i;
+  unsigned int nServers, left, i, res;
   const struct osdg_endpoint **list, **randomized;
 
   for (nServers = 0; servers[nServers].host; nServers++);
@@ -85,6 +118,10 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
     client->errorKind = osdg_invalid_parameters;
     return -1;
   }
+
+  res = allocate_buffers(client);
+  if (res)
+    return res;
 
   /* Permute servers in random order in order to distribute the load */
   list = malloc(nServers * sizeof(void *));
@@ -132,7 +169,7 @@ int osdg_client_connect_to_server(osdg_client_t client, const struct osdg_endpoi
   return res;
 }
 
-void osdg_client_destroy(osdg_client_t client)
+void osdg_connection_destroy(osdg_client_t client)
 {
   struct osdg_buffer *buffer, *next;
 
@@ -148,12 +185,12 @@ void osdg_client_destroy(osdg_client_t client)
   free(client);
 }
 
-enum osdg_error_kind osdg_client_get_error_kind(osdg_client_t client)
+enum osdg_error_kind osdg_get_error_kind(osdg_client_t client)
 {
   return client->errorKind;
 }
 
-int osdg_client_get_error_code(osdg_client_t client)
+int osdg_get_error_code(osdg_client_t client)
 {
   return client->errorCode;
 }

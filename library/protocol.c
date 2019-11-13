@@ -177,7 +177,7 @@ int receive_packet(struct _osdg_client *client)
         build_random_long_term_nonce(&nonce, "CurveCPV");
         ret = crypto_box(outerData.curvecp_vouch_inner - crypto_box_BOXZEROBYTES,
                          (unsigned char *)&innerData, sizeof(innerData), nonce.data,
-                         client->serverPubkey, client->clientSecret);
+                         client->serverPubkey, clientSecret);
         if (ret)
         {
             client->errorKind = osdg_encryption_error;
@@ -186,7 +186,7 @@ int receive_packet(struct _osdg_client *client)
 
         /* Now compose the outer data */
         zero_pad(outerData.outerPad);
-        memcpy(outerData.clientPubkey, client->clientPubkey, sizeof(outerData.clientPubkey));
+        memcpy(outerData.clientPubkey, clientPubkey, sizeof(outerData.clientPubkey));
         outerData.nonce[0] = nonce.value[1];
         outerData.nonce[1] = nonce.value[2];
         /*
@@ -341,8 +341,8 @@ int sendTELL(struct _osdg_client *client)
 {
     struct packet_header tell;
 
-    DUMP(PROTOCOL, client->clientPubkey, sizeof(client->clientPubkey), "Using public key");
-    DUMP(PROTOCOL, client->clientSecret, crypto_box_SECRETKEYBYTES, "Using private key");
+    DUMP(PROTOCOL, clientPubkey, sizeof(clientPubkey), "Using public key");
+    DUMP(PROTOCOL, clientSecret, sizeof(clientSecret), "Using private key");
 
     build_header(&tell, CMD_TELL, sizeof(tell));
     return send_packet(&tell, client);
