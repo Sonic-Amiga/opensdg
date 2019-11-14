@@ -10,7 +10,7 @@
 
 static struct _osdg_client *connections[MAX_CONNECTIONS];
 
-int register_connection(struct _osdg_client *conn)
+int mainloop_add_connection(struct _osdg_client *conn)
 {
     int i;
 
@@ -26,7 +26,7 @@ int register_connection(struct _osdg_client *conn)
     return -1;
 }
 
-void unregister_connection(struct _osdg_client *conn)
+void mainloop_remove_connection(struct _osdg_client *conn)
 {
     int i;
 

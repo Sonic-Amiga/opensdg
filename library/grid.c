@@ -38,27 +38,17 @@ int osdg_connect_to_grid(osdg_client_t client, const struct osdg_endpoint *serve
 
     for (i = 0; i < nServers; i++)
     {
-        res = try_to_connect(client, randomized[i]->host, randomized[i]->port);
-
-        if (res < 0)
-            break; /* Serious error, give up now */
-        if (res == 1)
-        {
-            register_connection(client);
-
-            res = sendTELL(client);
-            if (!res)
-                break;
-
-            connection_shutdown(client);
-            res = -1;
-        }
+        res = connect_to_host(client, randomized[i]->host, randomized[i]->port);
+        if (res != 0)
+            break; /* Success or serious error */
     }
 
     free((void *)randomized);
 
-    if (res)
+    if (res < 0)
         client->errorKind = osdg_connection_failed;
+    else if (res > 0)
+        res = 0;
 
     return res;
 }

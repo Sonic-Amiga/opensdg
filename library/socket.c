@@ -1,4 +1,5 @@
 #include "client.h"
+#include "mainloop.h"
 #include "socket.h"
 
 #ifdef _WIN32
@@ -36,7 +37,7 @@ static inline void set_socket_error(struct _osdg_client *client)
     client->errorCode = sockerrno();
 }
 
-int try_to_connect(struct _osdg_client *client, const char *host, unsigned short port)
+int connect_to_host(struct _osdg_client *client, const char *host, unsigned short port)
 {
     struct addrinfo *addr, *ai;
     int res;
@@ -68,7 +69,7 @@ int try_to_connect(struct _osdg_client *client, const char *host, unsigned short
         }
 
         s = socket(addr->sa_family, SOCK_STREAM, 0);
-        if (s < 0)
+        if (s == -1)
         {
             set_socket_error(client);
             LOG(ERRORS, "Failed to open socket for AF %d", addr->sa_family);
@@ -83,25 +84,34 @@ int try_to_connect(struct _osdg_client *client, const char *host, unsigned short
  
             LOG(CONNECTION, "Connected to %s:%u", host, port);
             res = ioctlsocket(s, FIONBIO, &nonblock);
-            if (res == 0)
-            {
-                client->sock = s;
-                res = 1;
-            }
-            else
+            if (res)
             {
                 set_socket_error(client);
                 LOG(ERRORS, "Failed to set non-blocking mode");
+                closesocket(s);
+                break; /* It's a serious error, will return -1 */
             }
-            break;
+
+            client->sock = s;
+            mainloop_add_connection(client);
+
+            res = sendTELL(client);
+            if (!res)
+            {
+                res = 1; /* Connected */
+                break;
+            }
+
+            /* This will also close the socket */
+            connection_shutdown(client);
         }
         else
         {
+            closesocket(s);
             LOG(CONNECTION, "Failed to connect to %s:%u", host, port);
-            res = 0; /* OK to try the next address */
+            res = 0; 
         }
-
-        closesocket(s);
+        res = 0; /* OK to try the next address */
     }
 
     freeaddrinfo(addr);
