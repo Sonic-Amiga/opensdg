@@ -105,12 +105,8 @@ struct curvecp_vouch_outer
   unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES]; /* Client long-term public key */
   unsigned long long nonce[2];
   ENCRYPTED_BOX(curvecp_vouch_inner);                    /* Encrypted inner box */
-  unsigned char certStrType;                             /* License certificate key-value pair */
-  unsigned char certStrLength;
-  unsigned char certStr[11];
-  unsigned char valueType;
-  unsigned char valueLength;
-  unsigned char license[128];
+  unsigned char haveCertificate;                         /* Certificate data presence flag */
+  unsigned char certificate[0];                          /* Certificate data follows */
 };
 
 struct packetVOCH
@@ -119,6 +115,15 @@ struct packetVOCH
   unsigned char cookie[curvecp_COOKIEBYTES]; /* Server cookie */
   unsigned long long nonce;                  /* Nonce value */
   ENCRYPTED_BOX(curvecp_vouch_outer);        /* Encrypted outer box */
+  /* Ciphertext can be longer, check full packet length */
+};
+
+struct certificate_data
+{
+    unsigned char prefixLength; /* Length of the following string without trailing NULL */
+    unsigned char prefix[12];   /* NULL-terminated string "certificate" */
+    unsigned char keyLength;    /* Length of the license key */
+    unsigned char key[128];     /* License key */
 };
 
 #define CMD_REDY SWAP_4_BYTES('R', 'E', 'D', 'Y') /* READY response from the server */

@@ -14,6 +14,12 @@ struct osdg_buffer
   struct osdg_buffer *next;
 };
 
+enum connection_mode
+{
+    mode_grid,
+    mode_peer
+};
+
 struct _osdg_client
 {
   UT_hash_handle       hh;
@@ -21,6 +27,7 @@ struct _osdg_client
   SOCKET               sock;
   unsigned int         errorKind;
   unsigned int         errorCode;
+  enum connection_mode mode;
   osdg_key_t           serverPubkey;                                /* Server's public key */
   unsigned char        clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
   unsigned char        clientTempSecret[crypto_box_SECRETKEYBYTES];

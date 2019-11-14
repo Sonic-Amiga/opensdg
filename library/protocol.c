@@ -139,11 +139,12 @@ int receive_packet(struct _osdg_client *client)
     else if (header->command == CMD_COOK)
     {
         struct packetCOOK *cook = (struct packetCOOK *)header;
+        struct curvecp_vouch_outer *outerData;
         union curvecp_nonce nonce;
         struct curvecp_cookie cookie;
         struct curvecp_vouch_inner innerData;
-        struct curvecp_vouch_outer outerData;
-        struct packetVOCH voch;
+        struct packetVOCH *voch;
+        int certDataSize;
 
         build_long_term_nonce(&nonce, "CurveCPK", cook->nonce);
 
@@ -169,54 +170,85 @@ int receive_packet(struct _osdg_client *client)
             return -1;
         }
 
+        /*
+         * The packet has variable length, so for simplicity we will get a buffer and
+         * build and encrypt the packet in place
+         */
+        voch = client_get_buffer(client);
+        outerData = (struct curvecp_vouch_outer *)(voch->curvecp_vouch_outer - crypto_box_BOXZEROBYTES);
+
         /* Build the inner crypto box */
         zero_pad(innerData.outerPad);
         memcpy(innerData.clientPubkey, client->clientTempPubkey, sizeof(innerData.clientPubkey));
 
         build_random_long_term_nonce(&nonce, "CurveCPV");
-        ret = crypto_box(outerData.curvecp_vouch_inner - crypto_box_BOXZEROBYTES,
+        ret = crypto_box(outerData->curvecp_vouch_inner - crypto_box_BOXZEROBYTES,
                          (unsigned char *)&innerData, sizeof(innerData), nonce.data,
                          client->serverPubkey, clientSecret);
         if (ret)
         {
+            client_put_buffer(client, voch);
             client->errorKind = osdg_encryption_error;
             return -1;
         }
 
         /* Now compose the outer data */
-        zero_pad(outerData.outerPad);
-        memcpy(outerData.clientPubkey, clientPubkey, sizeof(outerData.clientPubkey));
-        outerData.nonce[0] = nonce.value[1];
-        outerData.nonce[1] = nonce.value[2];
-        /*
-         * License key is appended to VOCH packet in a form of key-value pair.
-         * Unlike MESG this is not protobuf, but a much simpler encoding.
-         * An empty license key is reported as all zeroes.
-         */
-        outerData.certStrType = 1; /* string type ? */
-        outerData.certStrLength = sizeof(outerData.certStr);
-        memcpy(outerData.certStr, "certificate", sizeof(outerData.certStr));
-        outerData.valueType = 0; /* byte array type ? */
-        outerData.valueLength = sizeof(outerData.license);
-        memset(outerData.license, 0, sizeof(outerData.license));
+        zero_pad(outerData->outerPad);
+        memcpy(outerData->clientPubkey, clientPubkey, sizeof(outerData->clientPubkey));
+        outerData->nonce[0] = nonce.value[1];
+        outerData->nonce[1] = nonce.value[2];
+
+        if (client->mode == mode_grid)
+        {
+            /*
+             * License key is appended to VOCH packet in a form of key-value pair.
+             * Unlike MESG this is not protobuf, but a fixed structure. An empty
+             * license key is reported as all zeroes.
+             * Actually the grid (at least DEVISmart one) accepts VOCH packets
+             * without this optional data just fine, but we fully replicate the
+             * original library just in case, for better compatibility.
+             */
+            struct certificate_data *cert = (struct certificate_data *)outerData->certificate;
+
+            outerData->haveCertificate = 1;
+            certDataSize = sizeof(struct certificate_data);
+
+            cert->prefixLength = 11; /* strlen("certificate") */
+            strcpy(cert->prefix, "certificate");
+            cert->keyLength = sizeof(cert->key);
+            memset(cert->key, 0, sizeof(cert->key));
+        }
+        else
+        {
+           /*
+            * When connecting to a peer the original library does not report
+            * the license key, we do the same.
+            */
+            outerData->haveCertificate = 0;
+            certDataSize = 0;
+        }
 
         /* And now build the packet */
-        build_header(&voch.header, CMD_VOCH, sizeof(voch));
+        build_header(&voch->header, CMD_VOCH, sizeof(struct packetVOCH) + certDataSize);
 
         build_short_term_nonce(&nonce, "CurveCP-client-I", client_get_nonce(client));
-        ret = crypto_box_afternm(voch.curvecp_vouch_outer - crypto_box_BOXZEROBYTES,
-                                 (unsigned char *)&outerData, sizeof(outerData), nonce.data,
-                                 client->beforenmData);
+        ret = crypto_box_afternm((unsigned char *)outerData, (unsigned char *)outerData,
+                                 sizeof(struct curvecp_vouch_outer) + certDataSize,
+                                 nonce.data, client->beforenmData);
         if (ret)
         {
+            client_put_buffer(client, voch);
             client->errorKind = osdg_encryption_error;
             return -1;
         }
 
-        memcpy(voch.cookie, client->serverCookie, sizeof(voch.cookie));
-        voch.nonce = nonce.value[2];
+        memcpy(voch->cookie, client->serverCookie, sizeof(voch->cookie));
+        voch->nonce = nonce.value[2];
 
-        return send_packet(&voch.header, client);
+        ret = send_packet(&voch->header, client);
+
+        client_put_buffer(client, voch);
+        return ret;
     }
     else if (header->command == CMD_REDY)
     {

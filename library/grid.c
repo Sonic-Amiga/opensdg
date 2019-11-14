@@ -18,6 +18,8 @@ int osdg_connect_to_grid(osdg_client_t client, const struct osdg_endpoint *serve
     if (res)
         return res;
 
+    client->mode = mode_grid;
+
     /* Permute servers in random order in order to distribute the load */
     list = malloc(nServers * sizeof(void *));
     for (i = 0; i < nServers; i++)

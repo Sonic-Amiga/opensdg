@@ -5,6 +5,7 @@
 #include "logging.h"
 #include "opensdg.h"
 #include "registry.h"
+#include "socket.h"
 
 int osdg_connect_to_remote(osdg_client_t grid, osdg_client_t peer, osdg_key_t peerId, const char *protocol)
 {
@@ -15,6 +16,7 @@ int osdg_connect_to_remote(osdg_client_t grid, osdg_client_t peer, osdg_key_t pe
   if (ret)
     return ret;
 
+  peer->mode = mode_peer;
   memcpy(peer->serverPubkey, peerId, sizeof(osdg_key_t));
   sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peerId, sizeof(osdg_key_t));
 
@@ -32,6 +34,7 @@ int osdg_connect_to_remote(osdg_client_t grid, osdg_client_t peer, osdg_key_t pe
 int peer_handle_remote_call_reply(PeerReply *reply)
 {
     struct _osdg_client *peer;
+    int ret;
 
     LOG(PROTOCOL, "Peer[%u] result %d\n", reply->id, reply->result);
 
@@ -49,7 +52,12 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     DUMP(PROTOCOL, reply->peer->unknown.data, reply->peer->unknown.len,
            "Forwarding ticket is");
 
-    /* TODO: Figure out what to do next. We need something more in order
-       to start receiving data */
-    return 0;
+    /* TODO: Figure out what to do with the ticket. In order to connect to the
+       peer original library sends some magic packet before TELL */
+
+    ret = connect_to_host(peer, reply->peer->server->host, reply->peer->server->port);
+    if (ret == 0)
+        peer->errorKind = osdg_connection_failed;
+
+    return 0; /* We never abort grid connection */
 }
