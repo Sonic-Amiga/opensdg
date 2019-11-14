@@ -6,6 +6,8 @@
 
 #include "opensdg.h"
 #include "protocol.h"
+#include "protocol.pb-c.h"
+#include "uthash.h"
 
 struct osdg_buffer
 {
@@ -14,6 +16,8 @@ struct osdg_buffer
 
 struct _osdg_client
 {
+  UT_hash_handle       hh;
+  int                  uid;
   SOCKET               sock;
   unsigned int         errorKind;
   unsigned int         errorCode;
@@ -30,22 +34,19 @@ struct _osdg_client
   unsigned char       *receiveBuffer;
   unsigned int         bytesReceived;
   unsigned int         bytesLeft;
-  struct _osdg_peer  **peers;                                       /* Table of all peers */
-  unsigned int         numPeers;                                    /* Number of entries in the table */
-  pthread_mutex_t      peersMutex;
 };
 
 /* Client's long term key pair, global */
 extern unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
 extern unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
 
-void *client_get_buffer(struct _osdg_client *client);
-void client_put_buffer(struct _osdg_client *client, void *ptr);
+int connection_allocate_buffers(struct _osdg_client *conn);
+void *client_get_buffer(struct _osdg_client *conn);
+void client_put_buffer(struct _osdg_client *conn, void *buffer);
 
 void connection_read_data(struct _osdg_client *conn);
+void connection_shutdown(struct _osdg_client *conn);
 
-unsigned int client_register_peer(struct _osdg_client *client, struct _osdg_peer *peer);
-void client_unregister_peer(struct _osdg_client *client, unsigned int id);
-struct _osdg_peer *client_find_peer(struct _osdg_client *client, unsigned int id);
+int peer_handle_remote_call_reply(PeerReply *reply);
 
 #endif

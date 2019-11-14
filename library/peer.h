@@ -10,6 +10,6 @@ struct _osdg_peer
   osdg_key_t           peerId; /* Our peer ID */
 };
 
-int peer_handle_connect_reply(struct _osdg_peer *peer, PeerReply *reply);
+int peer_handle_remote_call_reply(struct _osdg_peer *peer, PeerReply *reply);
 
 #endif

@@ -7,7 +7,6 @@
 
 #include "client.h"
 #include "logging.h"
-#include "peer.h"
 #include "socket.h"
 #include "protocol.h"
 #include "protocol.pb-c.h"
@@ -298,30 +297,20 @@ int receive_packet(struct _osdg_client *client)
                 return ret;
             }
         }
-        else if (payload->dataType = MSG_PEER_REPLY)
+        else if (payload->dataType = MSG_REMOTE_REPLY)
         {
             PeerReply *reply = peer_reply__unpack(NULL, length, payload->data);
-            struct _osdg_peer *peer;
 
             if (!reply)
             {
-                DUMP(ERRORS, payload->data, length, "MSG_PEER_REPLY protobuf decoding error");
+                DUMP(ERRORS, payload->data, length, "MSG_REMOTE_REPLY protobuf decoding error");
                 return 0; /* Ignore */
             }
 
-            peer = client_find_peer(client, reply->id);
-            if (peer)
-            {
-                /* TODO: It is theoretically possible to have peer destroyed by
-                    this moment from within different thread. How to prevent that ? */
-                ret = peer_handle_connect_reply(peer, reply);
-            }
-            else
-            {
-                LOG(ERRORS, "Received MSG_PEER_REPLY for nonexistent peer %u\n", reply->id);
-            }
-
+            ret = peer_handle_remote_call_reply(reply);
             peer_reply__free_unpacked(reply, NULL);
+
+            return ret;
         }
         else
         {
@@ -392,4 +381,3 @@ int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *da
   client_put_buffer(client, mesg);
   return res;
 }
-

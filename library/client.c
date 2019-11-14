@@ -6,9 +6,7 @@
 #include "mainloop.h"
 #include "protocol.h"
 #include "socket.h"
-
-/* Peers table increment */
-#define PEERS_CHUNK 64
+#include "registry.h"
 
 /* Our key pair */
 unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
@@ -21,6 +19,8 @@ int osdg_init(const osdg_key_t private_key)
         LOG(ERRORS, "libsodium init failed");
         return -1;
     }
+
+    registry_init();
 
     /* TODO: Move Winsock init here */
 
@@ -37,7 +37,7 @@ static inline void client_put_buffer_nolock(struct _osdg_client *client, struct 
   client->bufferQueue = buffer;
 }
 
-static inline int allocate_buffers(struct _osdg_client *conn)
+int connection_allocate_buffers(struct _osdg_client *conn)
 {
     int i;
 
@@ -68,6 +68,7 @@ osdg_client_t osdg_connection_create(void)
   if (!client)
     return NULL;
 
+  client->uid           = -1;
   client->errorKind     = osdg_no_error;
   client->errorCode     = 0;
   client->nonce         = 0;
@@ -79,20 +80,15 @@ osdg_client_t osdg_connection_create(void)
   client->bufferSize    = 1536;
   client->bufferQueue   = NULL;
   client->receiveBuffer = NULL;
-  client->numPeers      = PEERS_CHUNK;
 
   pthread_mutex_init(&client->bufferMutex, NULL);
-  pthread_mutex_init(&client->peersMutex, NULL);
-
-  /* Allocate peers table */
-  client->peers = calloc(client->numPeers, sizeof(void *));
 
   return client;
 }
 
-static void connection_shutdown(struct _osdg_client *client)
+void connection_shutdown(struct _osdg_client *client)
 {
-    unregister_connection(client);
+    registry_remove_connection(client);
 
     if (client->receiveBuffer)
     {
@@ -105,68 +101,6 @@ static void connection_shutdown(struct _osdg_client *client)
         closesocket(client->sock);
         client->sock = -1;
     }
-}
-
-int osdg_connect_to_grid(osdg_client_t client, const struct osdg_endpoint *servers)
-{
-  unsigned int nServers, left, i, res;
-  const struct osdg_endpoint **list, **randomized;
-
-  for (nServers = 0; servers[nServers].host; nServers++);
-  if (nServers == 0)
-  {
-    client->errorKind = osdg_invalid_parameters;
-    return -1;
-  }
-
-  res = allocate_buffers(client);
-  if (res)
-    return res;
-
-  /* Permute servers in random order in order to distribute the load */
-  list = malloc(nServers * sizeof(void *));
-  for (i = 0; i < nServers; i++)
-    list[i] = &servers[i];
-
-  randomized = malloc(nServers * sizeof(void *));
-  left = nServers;
-  for (i = 0; i < nServers; i++)
-  {
-    unsigned int idx = rand() / ((((unsigned int)RAND_MAX) + 1) / left);
-
-    randomized[i] = list[idx];
-    left--;
-    list[idx] = list[left];
-  }
-
-  free((void *)list);
-
-  for (i = 0; i < nServers; i++)
-  {
-    res = try_to_connect(client, randomized[i]->host, randomized[i]->port);
-
-    if (res < 0)
-      break; /* Serious error, give up */
-
-    if (res == 1)
-    {
-      register_connection(client);
-
-      res = sendTELL(client);
-      if (!res)
-        break;
-
-      connection_shutdown(client);
-      res = -1;
-    }
-  }
-
-  free((void *)randomized);
-
-  if (res)
-    client->errorKind = osdg_connection_failed;
-
-  return res;
 }
 
 void osdg_connection_destroy(osdg_client_t client)
@@ -193,6 +127,11 @@ enum osdg_error_kind osdg_get_error_kind(osdg_client_t client)
 int osdg_get_error_code(osdg_client_t client)
 {
   return client->errorCode;
+}
+
+const unsigned char *osdg_get_peer_id(osdg_client_t conn)
+{
+    return conn->serverPubkey;
 }
 
 void *client_get_buffer(struct _osdg_client *client)
@@ -238,49 +177,3 @@ void connection_read_data(struct _osdg_client *conn)
         /* TODO: Implement some notification here */
     }
 }
-
-unsigned int client_register_peer(struct _osdg_client *client, struct _osdg_peer *peer)
-{
-  unsigned int i;
-
-  pthread_mutex_lock(&client->peersMutex);
-
-  for (i = 0; i < client->numPeers; i++)
-  {
-    if (!client->peers[i])
-      break;
-  }
-
-  if (i == client->numPeers)
-  {
-    unsigned int numPeers = client->numPeers + PEERS_CHUNK;
-
-    client->peers = realloc(client->peers, client->numPeers);
-    client->numPeers = numPeers;
-    memset(&client->peers[numPeers], 0, sizeof(void *) * PEERS_CHUNK);
-  }
-
-  client->peers[i] = peer;
-
-  pthread_mutex_unlock(&client->peersMutex);
-  return i;
-}
-
-void client_unregister_peer(struct _osdg_client *client, unsigned int id)
-{
-  pthread_mutex_lock(&client->peersMutex);
-  client->peers[id] = NULL;
-  pthread_mutex_unlock(&client->peersMutex);
-}
-
-struct _osdg_peer *client_find_peer(struct _osdg_client *client, unsigned int id)
-{
-  struct _osdg_peer *peer;
-
-  pthread_mutex_lock(&client->peersMutex);
-  peer = (id < client->numPeers) ? client->peers[id] : NULL;
-  pthread_mutex_unlock(&client->peersMutex);
-
-  return peer;
-}
-

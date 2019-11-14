@@ -202,7 +202,7 @@ static void list_pairings(void)
   }
 }
 
-static osdg_peer_t peers[MAX_PEERS];
+static osdg_client_t peers[MAX_PEERS];
 static unsigned int num_peers = 0;
 
 static int get_peer_number(void)
@@ -228,7 +228,7 @@ static void list_peers(void)
       continue;
 
     printf("%2d ", i);
-    hexdump(osdg_peer_get_id(peers[i]), sizeof(osdg_key_t));
+    hexdump(osdg_get_peer_id(peers[i]), sizeof(osdg_key_t));
     putchar('\n');
   }
 }
@@ -238,7 +238,7 @@ static void connect_to_peer(osdg_client_t client, char *argStr)
   unsigned int idx = get_peer_number();
   const char *arg;
   osdg_key_t peerId;
-  osdg_peer_t peer;
+  osdg_client_t peer;
   int res;
 
   if (idx == -1)
@@ -274,18 +274,18 @@ static void connect_to_peer(osdg_client_t client, char *argStr)
   if (!arg[0])
     arg = "dominion-1.0"; // Default to DEVISmart thermostat protocol
 
-  peer = osdg_peer_create(client);
+  peer = osdg_connection_create();
   if (!peer)
   {
     printf("Failed to create peer!\n");
     return;
   }
 
-  res = osdg_peer_connect(peer, peerId, arg);
+  res = osdg_connect_to_remote(client, peer, peerId, arg);
   if (res)
   {
     printf("Failed to start connection!\n");
-    osdg_peer_destroy(peer);
+    osdg_connection_destroy(peer);
   }
 
   printf("Created connection #%u\n", idx);
