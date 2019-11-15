@@ -47,13 +47,19 @@ int peer_handle_remote_call_reply(PeerReply *reply)
 
     registry_remove_connection(peer);
 
-    LOG(PROTOCOL, "Peer[%u] Forwarding ready at %s:%u", reply->id,
-        reply->peer->server->host, reply->peer->server->port);
-    DUMP(PROTOCOL, reply->peer->unknown.data, reply->peer->unknown.len,
-           "Forwarding ticket is");
+    DUMP(PROTOCOL, reply->peer->tunnelid.data, reply->peer->tunnelid.len,
+         "Peer[%u] Forwarding ready at %s:%u tunnel", reply->id,
+         reply->peer->server->host, reply->peer->server->port);
+ 
+    peer->tunnelIdSize = reply->peer->tunnelid.len;
+    peer->tunnelId = malloc(peer->tunnelIdSize);
+    if (!peer->tunnelId)
+    {
+        peer->errorKind = osdg_memory_error;
+        return 0;
+    }
 
-    /* TODO: Figure out what to do with the ticket. In order to connect to the
-       peer original library sends some magic packet before TELL */
+    memcpy(peer->tunnelId, reply->peer->tunnelid.data, peer->tunnelIdSize);
 
     ret = connect_to_host(peer, reply->peer->server->host, reply->peer->server->port);
     if (ret == 0)

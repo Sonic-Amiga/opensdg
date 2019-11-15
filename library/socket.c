@@ -95,7 +95,7 @@ int connect_to_host(struct _osdg_client *client, const char *host, unsigned shor
             client->sock = s;
             mainloop_add_connection(client);
 
-            res = sendTELL(client);
+            res = start_connection(client);
             if (!res)
             {
                 res = 1; /* Connected */

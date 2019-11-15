@@ -34,6 +34,8 @@ struct _osdg_client
   unsigned char        serverCookie[curvecp_COOKIEBYTES];
   unsigned char        beforenmData[crypto_box_BEFORENMBYTES];
   unsigned long long   nonce;
+  unsigned char       *tunnelId;
+  size_t               tunnelIdSize;
   char                 haveBuffers;
   size_t               bufferSize;
   struct osdg_buffer  *bufferQueue;

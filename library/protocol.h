@@ -143,13 +143,18 @@ struct packetREDY
 };
 
 #define CMD_MESG SWAP_4_BYTES('M', 'E', 'S', 'G') /* General incoming message */
+struct DataPacket
+{
+  unsigned short size;    /* Payload size plus 1 (size of "dataType"). Bigendian */
+  unsigned char  type;    /* Message data type, see below */
+  unsigned char  data[0]; /* Serialized data start here */
+};
+
 struct mesg_payload
 {
-  unsigned char  outerPad[crypto_box_BOXZEROBYTES]; /* Outer padding for crypto_box() */
-  unsigned char  innerPad[crypto_box_BOXZEROBYTES]; /* Inner padding */
-  unsigned short dataSize;                          /* Payload size plus 1 (size of "dataType"). Bigendian */
-  unsigned char  dataType;                          /* Message data type, see below */
-  unsigned char  data[0];                           /* Serialized data start here */
+  unsigned char     outerPad[crypto_box_BOXZEROBYTES]; /* Outer padding for crypto_box() */
+  unsigned char     innerPad[crypto_box_BOXZEROBYTES]; /* Inner padding */
+  struct DataPacket data;                              /* Payload itself */
 };
 
 struct packetMESG
@@ -205,20 +210,24 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
     randombytes((unsigned char *)&nonce->value[1], 16);
 }
 
-/* Message types */
+/* Grid message types */
+#define MSG_FORWARD_REMOTE   0
 #define MSG_PROTOCOL_VERSION 1
+#define MSG_FORWARD_REPLY    2
 #define MSG_CALL_REMOTE      10
 #define MSG_REMOTE_REPLY     11
 
-#define PROTOCOL_VERSION_MAGIC 0xF09D8CA8
-#define PROTOCOL_VERSION_MAJOR 1
-#define PROTOCOL_VERSION_MINOR 0
+#define FORWARD_REMOTE_MAGIC     0xF09D8C95
+#define FORWARD_REMOTE_SIGNATURE "Mdg-NaCl/binary"
+#define PROTOCOL_VERSION_MAGIC   0xF09D8CA8
+#define PROTOCOL_VERSION_MAJOR   1
+#define PROTOCOL_VERSION_MINOR   0
 
 void build_header(struct packet_header *header, int cmd, size_t size);
 int send_packet(struct packet_header *header, struct _osdg_client *client);
 int receive_packet(struct _osdg_client *client);
 
-int sendTELL(struct _osdg_client *client);
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data);
+int start_connection(struct _osdg_client *conn);
 
 #endif

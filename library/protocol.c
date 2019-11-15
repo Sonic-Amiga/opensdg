@@ -25,6 +25,17 @@ int send_packet(struct packet_header *header, struct _osdg_client *client)
     return send_data((const unsigned char *)header, PACKET_SIZE(header), client);
 }
 
+static int sendTELL(struct _osdg_client *client)
+{
+    struct packet_header tell;
+
+    DUMP(PROTOCOL, clientPubkey, sizeof(clientPubkey), "Using public key");
+    DUMP(PROTOCOL, clientSecret, sizeof(clientSecret), "Using private key");
+
+    build_header(&tell, CMD_TELL, sizeof(tell));
+    return send_packet(&tell, client);
+}
+
 static void *decryptMESG(struct packet_header *header, struct _osdg_client *client, const char *nonce_prefix)
 {
     struct packetMESG *mesg = (struct packetMESG *)header;
@@ -90,10 +101,47 @@ int receive_packet(struct _osdg_client *client)
     if (ret <= 0)
         return ret;
 
+    // Sometimes before MSG_FORWARD_REPLY a three byte packet arrives,
+    // containing a number one. I don't know what this is, ignore it.
+    if (ret == 3 && client->receiveBuffer[2] == 1)
+        return 0;
+
+    if (client->receiveBuffer[2] == MSG_FORWARD_REPLY)
+    {
+        struct DataPacket *pkt = (struct DataPacket *)client->receiveBuffer;
+        unsigned int length = SWAP_16(pkt->size) - sizeof(pkt->type);
+        ForwardReply *reply = forward_reply__unpack(NULL, length, pkt->data);
+
+        if (!reply)
+        {
+            DUMP(ERRORS, pkt->data, length, "Failed to decode MSG_FORWARD_REPLY");
+            client->errorKind = osdg_protocol_error;
+            return -1;
+        }
+
+        ret = strcmp(reply->signature, FORWARD_REMOTE_SIGNATURE);
+        if (ret)
+            LOG(ERRORS, "Wrong forwarding signature: %s", reply->signature);
+
+        forward_reply__free_unpacked(reply, NULL);
+
+        if (ret)
+            return -1;
+
+        return sendTELL(client);
+    }
+
+    if (ret < sizeof(struct packet_header))
+    {
+        DUMP(ERRORS, client->receiveBuffer, ret, "Invalid packet received, too short");
+        client->errorKind = osdg_protocol_error;
+        return -1;
+    }
+
     header = (struct packet_header *)client->receiveBuffer;
     if (header->magic != PACKET_MAGIC)
     {
-        LOG(ERRORS, "Invalid packet received, wrong magic");
+        DUMP(ERRORS, client->receiveBuffer, ret, "Invalid packet received, wrong magic");
         client->errorKind = osdg_protocol_error;
         return -1;
     }
@@ -275,7 +323,15 @@ int receive_packet(struct _osdg_client *client)
         length = MESG_CIPHERTEXT_SIZE(header) - crypto_box_BOXZEROBYTES;
         DUMP(PROTOCOL, payload->unknown, length, "Got REDY response (%u bytes)", length);
 
-        /* Now let's do protocol version handshake */
+        if (client->mode != mode_grid)
+            return 0; /* If our peer is a device, we're done */
+
+        /*
+         * At this point the grid seems to be also ready and subsequent steps
+         * are probably optional. But let's do them just in case, to be as close
+         * to original implementation as possible.
+         * Now let's do protocol version handshake
+         */
         protocol_version__init(&protocolVer);
         protocolVer.magic = PROTOCOL_VERSION_MAGIC;
         protocolVer.major = PROTOCOL_VERSION_MAJOR;
@@ -292,11 +348,20 @@ int receive_packet(struct _osdg_client *client)
         if (!payload)
             return -1;
 
-        length = SWAP_16(payload->dataSize) - sizeof(payload->dataType);
+        length = SWAP_16(payload->data.size);
 
-        if (payload->dataType == MSG_PROTOCOL_VERSION)
+        if (client->mode != mode_grid)
         {
-            ProtocolVersion *protocolVer = protocol_version__unpack(NULL, length, payload->data);
+            // Data from peer are raw data, no type ID
+            DUMP(PROTOCOL, &payload->data.type, length, "Received data from peer");
+            return 0;
+        }
+
+        length -= sizeof(payload->data.type);
+
+        if (payload->data.type == MSG_PROTOCOL_VERSION)
+        {
+            ProtocolVersion *protocolVer = protocol_version__unpack(NULL, length, payload->data.data);
 
             if (!protocolVer)
             {
@@ -308,6 +373,7 @@ int receive_packet(struct _osdg_client *client)
             if (protocolVer->magic != PROTOCOL_VERSION_MAGIC)
             {
                 LOG(ERRORS, "Incorrect protocol version magic 0x%08X", protocolVer->magic);
+                ret = -1;
             }
             else if (protocolVer->major != PROTOCOL_VERSION_MAJOR || protocolVer->minor != PROTOCOL_VERSION_MINOR)
             {
@@ -329,13 +395,13 @@ int receive_packet(struct _osdg_client *client)
                 return ret;
             }
         }
-        else if (payload->dataType = MSG_REMOTE_REPLY)
+        else if (payload->data.type = MSG_REMOTE_REPLY)
         {
-            PeerReply *reply = peer_reply__unpack(NULL, length, payload->data);
+            PeerReply *reply = peer_reply__unpack(NULL, length, payload->data.data);
 
             if (!reply)
             {
-                DUMP(ERRORS, payload->data, length, "MSG_REMOTE_REPLY protobuf decoding error");
+                DUMP(ERRORS, payload->data.data, length, "MSG_REMOTE_REPLY protobuf decoding error");
                 return 0; /* Ignore */
             }
 
@@ -346,8 +412,8 @@ int receive_packet(struct _osdg_client *client)
         }
         else
         {
-            DUMP(PROTOCOL, payload->data, length,
-                 "Unhandled MESG type %u length %u bytes:", payload->dataType, length);
+            DUMP(PROTOCOL, payload->data.data, length,
+                 "Unhandled MESG type %u length %u bytes:", payload->data.type, length);
         }
     }
     else
@@ -356,17 +422,6 @@ int receive_packet(struct _osdg_client *client)
     }
 
     return 0;
-}
-
-int sendTELL(struct _osdg_client *client)
-{
-    struct packet_header tell;
-
-    DUMP(PROTOCOL, clientPubkey, sizeof(clientPubkey), "Using public key");
-    DUMP(PROTOCOL, clientSecret, sizeof(clientSecret), "Using private key");
-
-    build_header(&tell, CMD_TELL, sizeof(tell));
-    return send_packet(&tell, client);
 }
 
 int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data)
@@ -391,9 +446,9 @@ int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *da
   payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
 
   zero_pad(payload->outerPad);
-  payload->dataSize = SWAP_16(dataSize + sizeof(payload->dataType));
-  payload->dataType = dataType;
-  protobuf_c_message_pack(data, payload->data);
+  payload->data.size = SWAP_16(dataSize + sizeof(payload->data.type));
+  payload->data.type = dataType;
+  protobuf_c_message_pack(data, payload->data.data);
 
   build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(client));
   res = crypto_box_afternm((unsigned char *)payload, (unsigned char *)payload,
@@ -412,4 +467,40 @@ int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *da
 
   client_put_buffer(client, mesg);
   return res;
+}
+
+static int sendForward(struct _osdg_client *conn)
+{
+    ForwardRemote fwd = FORWARD_REMOTE__INIT;
+    struct DataPacket *pkt = client_get_buffer(conn);
+    size_t dataSize;
+
+    fwd.magic         = FORWARD_REMOTE_MAGIC;
+    fwd.protocolmajor = PROTOCOL_VERSION_MAJOR;
+    fwd.protocolminor = PROTOCOL_VERSION_MINOR;
+    fwd.tunnelid.data = conn->tunnelId;
+    fwd.tunnelid.len  = conn->tunnelIdSize;
+    fwd.signature     = "Mdg-NaCl/binary";
+
+    dataSize = forward_remote__get_packed_size(&fwd);
+
+    pkt->size = SWAP_16(dataSize + sizeof(pkt->type));
+    pkt->type = MSG_FORWARD_REMOTE;
+    forward_remote__pack(&fwd, pkt->data);
+
+    /* We don't need this any more */
+    free(conn->tunnelId);
+    conn->tunnelId = NULL;
+
+    /* MSG_FORWARD_REMOTE is sent unencrypted */
+    DUMP(PACKETS, pkt->data, dataSize, "Sending MSG_FORWARD_REMOTE");
+    return send_data((unsigned char *)pkt, sizeof(struct DataPacket) + (int)dataSize, conn);
+}
+
+int start_connection(struct _osdg_client *conn)
+{
+    if (conn->tunnelId)
+        return sendForward(conn);
+    else
+        return sendTELL(conn);
 }

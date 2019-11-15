@@ -1,5 +1,15 @@
 syntax = "proto2";
 
+// MSG_FORWARD_REMOTE
+message ForwardRemote
+{
+  required fixed32 magic         = 1; // FORWARD_REMOTE_MAGIC
+  required uint32  protocolMajor = 2; // Protocol version
+  required uint32  protocolMinor = 3;
+  required bytes   tunnelId      = 4; // Tunnel ID from MSG_REMOTE_REPLY
+  required string  signature     = 5; // "Mdg-NaCl/binary"
+}
+
 // MSG_PROTOCOL_VERSION
 message Property
 {
@@ -15,7 +25,13 @@ message ProtocolVersion
   repeated Property properties = 4;
 }
 
-// MSG_CONNECT_TO_PEER
+// MSG_FORWARD_REPLY
+message ForwardReply
+{
+  required string signature = 1;
+}
+
+// MSG_CALL_REMOTE
 message ConnectToPeer
 {
   required uint32 id       = 1;
@@ -23,7 +39,7 @@ message ConnectToPeer
   required string protocol = 3;
 }
 
-// MSG_PEER_REPLY
+// MSG_REMOTE_REPLY
 message PeerReply
 {
   required uint32 id     = 1;
@@ -36,8 +52,8 @@ message PeerReply
       required string host = 1;
       required uint32 port = 2;
     }
-    required ForwardHost server  = 4;
-    required bytes       unknown = 5;
+    required ForwardHost server   = 4;
+    required bytes       tunnelId = 5;
   }
   optional PeerInfo peer = 3;
 }
