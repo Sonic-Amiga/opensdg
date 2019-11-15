@@ -305,23 +305,17 @@ int receive_packet(struct _osdg_client *client)
          * being nonce prefix
          */
         struct redy_payload *payload = decryptMESG(header, client, "CurveCP-server-R");
-        unsigned int length;
         ProtocolVersion protocolVer;
 
         if (!payload)
             return -1;
 
         /*
-         * REDY payload from DEVISmart cloud consists of 16 zeroes of padding and
-         * then one more zero byte. Original mdglib gets a pointer to that byte and
-         * calls some function by pointer, which performs some verification and
-         * can return error, causing connection abort. This function also gets
-         * license key information.
-         * Perhaps this has something to do with license validation. We don't know
-         * and don't care.
+         * REDY payload from DEVISmart cloud is empty, but a thermostat sends its
+         * built-in license certificate here.
+         * We are noncommercial client, we don't care about those certificate, so
+         * just ignore it.
          */
-        length = MESG_CIPHERTEXT_SIZE(header) - crypto_box_BOXZEROBYTES;
-        DUMP(PROTOCOL, payload->unknown, length, "Got REDY response (%u bytes)", length);
 
         if (client->mode != mode_grid)
             return 0; /* If our peer is a device, we're done */

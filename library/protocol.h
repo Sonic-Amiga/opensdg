@@ -131,7 +131,8 @@ struct redy_payload
 {
   unsigned char outerPad[crypto_box_BOXZEROBYTES]; /* Outer padding for crypto_box() */
   unsigned char innerPad[crypto_box_BOXZEROBYTES]; /* Inner padding */
-  unsigned char unknown[1];                        /* We get at least one byte of unknown value */
+  unsigned char haveCertificate;                   /* Certificate data from our peer */
+  unsigned char certificate[0];
 };
 
 struct packetREDY
