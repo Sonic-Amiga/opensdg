@@ -45,6 +45,7 @@ struct _osdg_connection
   unsigned char       *receiveBuffer;
   unsigned int         bytesReceived;
   unsigned int         bytesLeft;
+  unsigned int         discardFirstBytes;
 };
 
 /* Client's long term key pair, global */
@@ -56,13 +57,8 @@ void *client_get_buffer(struct _osdg_connection *conn);
 void client_put_buffer(struct _osdg_connection *conn, void *buffer);
 
 void connection_read_data(struct _osdg_connection *conn);
+int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length);
 void connection_shutdown(struct _osdg_connection *conn);
-
-static inline int connection_receive_data(struct _osdg_connection *conn,
-                                          const unsigned char *data, int length)
-{
-  return conn->receiveData ? conn->receiveData(conn, data, length) : 0;
-}
 
 int peer_handle_remote_call_reply(PeerReply *reply);
 

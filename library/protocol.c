@@ -341,7 +341,7 @@ int receive_packet(struct _osdg_connection *client)
             return -1;
 
         length = SWAP_16(payload->data.size);
-        ret = connection_receive_data(client, payload->data.data, length);
+        ret = connection_handle_data(client, payload->data.data, length);
         if (ret)
             client->errorKind = osdg_protocol_error;
     }

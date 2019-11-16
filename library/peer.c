@@ -20,6 +20,23 @@ int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_
   memcpy(peer->serverPubkey, peerId, sizeof(osdg_key_t));
   sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peerId, sizeof(osdg_key_t));
 
+  /*
+   * DEVISmart thermostat has a quirk: very first packet is prefixed with
+   * a garbage byte, which has to be skipped.
+   * Apparently this is some buffering bug, which seems to have become a
+   * part of the protocol spec ;) The original DEVISmart app implements
+   * exactly this king of a logic in order to discard this byte: just remember
+   * the fact that the connection is new.
+   * Here we are generalizing this solution to "discard first N bytes", just
+   * in case. If there are more susceptible peers, they need to be listed here
+   * in order to prevent application writers from implementing the workaround
+   * over and over again.
+   */
+  if (!strcmp(protocol, "dominion-1.0"))
+      peer->discardFirstBytes = 1;
+  else
+      peer->discardFirstBytes = 0;
+
   registry_add_connection(peer);
 
   LOG(PROTOCOL, "Peer[%u] connecting to %s:%s", peer->uid, peerIdStr, protocol);

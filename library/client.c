@@ -75,7 +75,6 @@ osdg_connection_t osdg_connection_create(void)
   client->receiveData   = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
-  client->tunnelIdSize  = 0;
   client->haveBuffers   = 0;
   /*
    * This buffer size is used by original mdglib from DEVISmart Android APK,
@@ -99,8 +98,6 @@ void connection_shutdown(struct _osdg_connection *client)
         free(client->tunnelId);
         client->tunnelId = NULL;
     }
-
-    client->tunnelIdSize = 0;
 
     if (client->receiveBuffer)
     {
@@ -198,4 +195,18 @@ void connection_read_data(struct _osdg_connection *conn)
         connection_shutdown(conn);
         /* TODO: Implement some notification here */
     }
+}
+
+int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length)
+{
+    unsigned int discard = conn->discardFirstBytes;
+    conn->discardFirstBytes = 0; /* Discarded */
+
+    if (length <= discard)
+        return 0; /* Just in case, we shouldn't get here */
+
+    data   += discard;
+    length -= discard;
+
+    return conn->receiveData ? conn->receiveData(conn, data, length) : 0;
 }
