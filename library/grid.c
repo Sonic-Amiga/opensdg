@@ -3,7 +3,7 @@
 #include "socket.h"
 
 static int grid_handle_incoming_packet(struct _osdg_connection *conn,
-                                       const unsigned char *data, int length)
+                                       const unsigned char *data, unsigned int length)
 {
     int ret = -1;
     unsigned char msgType;

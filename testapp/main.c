@@ -9,6 +9,9 @@
 
 #include "opensdg.h"
 #include "pthread_wrapper.h"
+#include "testapp.h"
+#include "devismart.h"
+#include "devismart_protocol.h"
 
 #define MAX_PEERS 32
 
@@ -154,7 +157,7 @@ const char *getWord(char **p)
   return buffer;
 }
 
-static void hexdump(const unsigned char *data, unsigned int size)
+void hexdump(const unsigned char *data, unsigned int size)
 {
   unsigned int i;
 
@@ -272,7 +275,7 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
 
   arg = getWord(&argStr);
   if (!arg[0])
-    arg = "dominion-1.0"; // Default to DEVISmart thermostat protocol
+    arg = DEVISMART_PROTOCOL_NAME; // Default to DEVISmart thermostat protocol
 
   peer = osdg_connection_create();
   if (!peer)
@@ -281,11 +284,20 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
     return;
   }
 
+  res = osdg_set_receive_data_callback(peer, devismart_receive_data);
+  if (res)
+  {
+      printf("Failed to set data receive callback!\n");
+      osdg_connection_destroy(peer);
+      return;
+  }
+
   res = osdg_connect_to_remote(client, peer, peerId, arg);
   if (res)
   {
     printf("Failed to start connection!\n");
     osdg_connection_destroy(peer);
+    return;
   }
 
   printf("Created connection #%u\n", idx);

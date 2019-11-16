@@ -1,4 +1,6 @@
-set(TESTAPP_SOURCES main.c pthread_wrapper.h)
+set(TESTAPP_SOURCES devismart.c devismart.h devismart_protocol.h
+                    main.c pthread_wrapper.h)
+
 add_executable(opensdg_test ${TESTAPP_SOURCES} ${PUBLIC_INCLUDE_FILES})
 target_link_libraries(opensdg_test PUBLIC opensdg)
 
