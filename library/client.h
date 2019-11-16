@@ -29,6 +29,7 @@ struct _osdg_connection
   unsigned int         errorKind;
   unsigned int         errorCode;
   enum connection_mode mode;
+  osdg_state_cb_t      changeState;
   osdg_receive_cb_t    receiveData;
   unsigned char        serverPubkey[crypto_box_PUBLICKEYBYTES];     /* Server's public key */
   unsigned char        clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
@@ -59,6 +60,12 @@ void client_put_buffer(struct _osdg_connection *conn, void *buffer);
 void connection_read_data(struct _osdg_connection *conn);
 int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length);
 void connection_shutdown(struct _osdg_connection *conn);
+
+static inline void connection_set_status(struct _osdg_connection *conn, enum osdg_connection_state state)
+{
+  if (conn->changeState)
+    conn->changeState(conn, state);
+}
 
 int peer_handle_remote_call_reply(PeerReply *reply);
 

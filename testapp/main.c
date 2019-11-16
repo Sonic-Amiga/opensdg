@@ -131,6 +131,11 @@ static void print_client_error(osdg_connection_t client)
     printf("Failed to connect to host\n");
     /* Probably not legitimate, but good for internal diagnostics */
     printWSAError("Last socket error", osdg_get_error_code(client));
+  case osdg_memory_error:
+    printf("Memory allocation error\n");
+    break;
+  case osdg_connection_refused:
+    printf("Connection refused by peer\n");
     break;
   default:
     printf("Unknon error kind %d\n", kind);
@@ -236,6 +241,50 @@ static void list_peers(void)
   }
 }
 
+static int lookup_peer(osdg_connection_t conn)
+{
+    unsigned int i;
+
+    for (i = 0; i < num_peers; i++)
+    {
+        if (peers[i] == conn)
+            return i;
+    }
+
+    return -1;
+}
+
+static void print_status(osdg_connection_t conn, enum osdg_connection_t status)
+{
+    switch (status)
+    {
+    case osdg_connected:
+        printf(" connection established\n");
+        break;
+    case osdg_error:
+        printf(" connection failed: ");
+        print_client_error(conn);
+        break;
+    default:
+        printf(" invalid status %u\n", status); /* You should not see this */
+        break;
+    }
+}
+
+static void grid_status_changed(osdg_connection_t conn, enum osdg_connection_status status)
+{
+    printf("Grid");
+    print_status(conn, status);
+}
+
+static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_status status)
+{
+    int idx = lookup_peer(conn);
+
+    printf("Peer #%d", idx);
+    print_status(conn, status);
+}
+
 static int default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
 {
     printf("Received data from the peer: ");
@@ -291,6 +340,8 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
     printf("Failed to create peer!\n");
     return;
   }
+
+  osdg_set_state_change_callback(peer, peer_status_changed);
 
   if (!strcmp(arg, DEVISMART_PROTOCOL_NAME))
     receiveFunc = devismart_receive_data;
@@ -375,6 +426,8 @@ int main(int argc, const char *const *argv)
     printf("Failed to create client!\n");
     return 255;
   }
+
+  osdg_set_state_change_callback(client, grid_status_changed);
 
   r = osdg_connect_to_grid(client, servers);
   if (r == 0)

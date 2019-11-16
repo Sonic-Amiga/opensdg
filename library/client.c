@@ -72,6 +72,7 @@ osdg_connection_t osdg_connection_create(void)
   client->errorKind     = osdg_no_error;
   client->errorCode     = 0;
   client->mode          = mode_none;
+  client->changeState   = NULL;
   client->receiveData   = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
@@ -143,6 +144,12 @@ const unsigned char *osdg_get_peer_id(osdg_connection_t conn)
     return conn->serverPubkey;
 }
 
+int osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f)
+{
+    client->changeState = f;
+    return 0;
+}
+
 int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f)
 {
     /* Grid connections have internal data handler, don't screw them up */
@@ -193,7 +200,7 @@ void connection_read_data(struct _osdg_connection *conn)
     {
         LOG(ERRORS, "Connection %p died", conn);
         connection_shutdown(conn);
-        /* TODO: Implement some notification here */
+        connection_set_status(conn, osdg_error);
     }
 }
 

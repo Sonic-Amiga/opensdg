@@ -31,8 +31,17 @@ OSDG_API void osdg_connection_destroy(osdg_connection_t client);
 OSDG_API int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
 OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol);
 
+enum osdg_connection_state
+{
+  osdg_not_connected,
+  osdg_connected,
+  osdg_error
+};
+
+typedef void(*osdg_state_cb_t)(osdg_connection_t conn, enum osdg_connection_state state);
 typedef int(*osdg_receive_cb_t)(osdg_connection_t conn, const unsigned char *data, unsigned int length);
 
+OSDG_API int osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f);
 OSDG_API int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f);
 
 enum osdg_error_kind
@@ -45,7 +54,8 @@ enum osdg_error_kind
   osdg_buffer_exceeded,    /* Buffer size is not enough for incoming data */
   osdg_invalid_parameters, /* Invalid parameters supplied to function call */
   osdg_connection_failed,  /* Unable to connect to any server */
-  osdg_memory_error        /* Memory (e. g. buffers) allocation error */
+  osdg_memory_error,       /* Memory (e. g. buffers) allocation error */
+  osdg_connection_refused  /* Connection refused by peer */
 };
 
 OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client);

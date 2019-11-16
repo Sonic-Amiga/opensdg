@@ -41,10 +41,13 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
         {
             LOG(PROTOCOL, "Using protocol version %u.%u", protocolVer->major, protocolVer->minor);
             ret = 0; /* We're done with the handshake */
-            /* TODO: Implement user notification */
         }
 
         protocol_version__free_unpacked(protocolVer, NULL);
+
+        if (!ret)
+            connection_set_status(conn, osdg_connected);
+
     } else if (msgType = MSG_REMOTE_REPLY)
     {
         PeerReply *reply = peer_reply__unpack(NULL, length, data);

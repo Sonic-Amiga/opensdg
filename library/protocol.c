@@ -316,7 +316,11 @@ int receive_packet(struct _osdg_connection *client)
          */
 
         if (client->mode != mode_grid)
-            return 0; /* If our peer is a device, we're done */
+        {
+            /* If talking to a peer, we're done */
+            connection_set_status(client, osdg_connected);
+            return 0;
+        }
 
         /*
          * At this point the grid seems to be also ready and subsequent steps

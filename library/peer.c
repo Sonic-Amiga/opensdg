@@ -65,7 +65,8 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     if (reply->result || (!reply->peer))
     {
         LOG(CONNECTION, "Peer[%u] connection refused; code %d", reply->id, reply->result);
-        peer->errorKind = osdg_connection_failed;
+        peer->errorKind = osdg_connection_refused;
+        connection_set_status(peer, osdg_error);
         return 0;
     }
 
@@ -78,6 +79,7 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     if (!peer->tunnelId)
     {
         peer->errorKind = osdg_memory_error;
+        connection_set_status(peer, osdg_error);
         return 0;
     }
 
@@ -85,7 +87,10 @@ int peer_handle_remote_call_reply(PeerReply *reply)
 
     ret = connect_to_host(peer, reply->peer->server->host, reply->peer->server->port);
     if (ret == 0)
+    {
         peer->errorKind = osdg_connection_failed;
+        connection_set_status(peer, osdg_error);
+    }
 
     return 0; /* We never abort grid connection */
 }
