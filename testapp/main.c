@@ -316,11 +316,24 @@ static const struct osdg_endpoint servers[] =
   {NULL, 0}
 };
 
-int main()
+int main(int argc, const char *const *argv)
 {
+  unsigned int logmask = OSDG_LOG_ERRORS;
   osdg_key_t clientKey;
   osdg_connection_t client;
-  int r;
+  int i, r;
+
+  for (i = 1; i < argc; i++)
+  {
+      if (!strcmp(argv[i], "-l"))
+      {
+          logmask = atoi(argv[i + 1]);
+          printf("Logging mask set to 0x%08X\n", logmask);
+          i++;
+      }
+  }
+
+  osdg_set_log_mask(logmask);
 
   /* This switches off DOS compatibility mode on Windows console */
   setlocale(LC_ALL, "");

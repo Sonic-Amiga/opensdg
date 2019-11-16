@@ -54,5 +54,12 @@ OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
 OSDG_API int osdg_main(void);
 
+/* Log masks */
+#define OSDG_LOG_ERRORS     0x01 /* Errors */
+#define OSDG_LOG_CONNECTION 0x02 /* Connection events */
+#define OSDG_LOG_PROTOCOL   0x04 /* Protocol */
+#define OSDG_LOG_PACKETS    0x08 /* Raw packets */
+
+OSDG_API osdg_set_log_mask(unsigned int mask);
 
 #endif

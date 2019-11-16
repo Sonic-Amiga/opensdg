@@ -4,7 +4,7 @@
 #include "logging.h"
 #include "opensdg.h"
 
-unsigned int log_mask = -1;
+unsigned int log_mask = 0;
 
 void _log(unsigned int mask, const char *format, ...)
 {
@@ -35,4 +35,9 @@ void _dump(unsigned int mask, const unsigned char *data, size_t length, const ch
     }
 
     putchar('\n');
+}
+
+osdg_set_log_mask(unsigned int mask)
+{
+    log_mask = mask;
 }
