@@ -236,12 +236,20 @@ static void list_peers(void)
   }
 }
 
+static int default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
+{
+    printf("Received data from the peer: ");
+    hexdump(data, length);
+    return 0;
+}
+
 static void connect_to_peer(osdg_connection_t client, char *argStr)
 {
   unsigned int idx = get_peer_number();
   const char *arg;
   osdg_key_t peerId;
   osdg_connection_t peer;
+  osdg_receive_cb_t receiveFunc;
   int res;
 
   if (idx == -1)
@@ -283,6 +291,11 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
     printf("Failed to create peer!\n");
     return;
   }
+
+  if (!strcmp(arg, DEVISMART_PROTOCOL_NAME))
+    receiveFunc = devismart_receive_data;
+  else
+    receiveFunc = default_peer_receive_data;
 
   res = osdg_set_receive_data_callback(peer, devismart_receive_data);
   if (res)
