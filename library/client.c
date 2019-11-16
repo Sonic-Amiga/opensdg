@@ -71,6 +71,8 @@ osdg_connection_t osdg_connection_create(void)
   client->uid           = -1;
   client->errorKind     = osdg_no_error;
   client->errorCode     = 0;
+  client->mode          = mode_none;
+  client->receiveData   = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
   client->tunnelIdSize  = 0;
@@ -142,6 +144,16 @@ int osdg_get_error_code(osdg_connection_t client)
 const unsigned char *osdg_get_peer_id(osdg_connection_t conn)
 {
     return conn->serverPubkey;
+}
+
+int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f)
+{
+    /* Grid connections have internal data handler, don't screw them up */
+    if (client->mode == mode_grid)
+        return -1;
+
+    client->receiveData = f;
+    return 0;
 }
 
 void *client_get_buffer(struct _osdg_connection *client)

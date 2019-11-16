@@ -147,7 +147,6 @@ struct packetREDY
 struct DataPacket
 {
   unsigned short size;    /* Payload size plus 1 (size of "dataType"). Bigendian */
-  unsigned char  type;    /* Message data type, see below */
   unsigned char  data[0]; /* Serialized data start here */
 };
 

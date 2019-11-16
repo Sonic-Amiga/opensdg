@@ -29,6 +29,11 @@ OSDG_API osdg_connection_t osdg_connection_create(void);
 OSDG_API void osdg_connection_destroy(osdg_connection_t client);
 
 OSDG_API int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
+OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol);
+
+typedef int(*osdg_receive_cb_t)(osdg_connection_t conn, const unsigned char *data, int length);
+
+OSDG_API int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f);
 
 enum osdg_error_kind
 {
@@ -46,8 +51,6 @@ enum osdg_error_kind
 OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client);
 OSDG_API int osdg_get_error_code(osdg_connection_t client);
 OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
-
-OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol);
 
 OSDG_API int osdg_main(void);
 

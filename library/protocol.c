@@ -109,8 +109,8 @@ int receive_packet(struct _osdg_connection *client)
     if (client->receiveBuffer[2] == MSG_FORWARD_REPLY)
     {
         struct DataPacket *pkt = (struct DataPacket *)client->receiveBuffer;
-        unsigned int length = SWAP_16(pkt->size) - sizeof(pkt->type);
-        ForwardReply *reply = forward_reply__unpack(NULL, length, pkt->data);
+        unsigned int length = SWAP_16(pkt->size) - 1;
+        ForwardReply *reply = forward_reply__unpack(NULL, length, &pkt->data[1]);
 
         if (!reply)
         {
@@ -182,7 +182,7 @@ int receive_packet(struct _osdg_connection *client)
         memcpy(helo.clientPubkey, client->clientTempPubkey, sizeof(helo.clientPubkey));
         helo.nonce = nonce.value[2];
 
-        return send_packet(&helo.header, client);
+        ret = send_packet(&helo.header, client);
     }
     else if (header->command == CMD_COOK)
     {
@@ -294,9 +294,7 @@ int receive_packet(struct _osdg_connection *client)
         voch->nonce = nonce.value[2];
 
         ret = send_packet(&voch->header, client);
-
         client_put_buffer(client, voch);
-        return ret;
     }
     else if (header->command == CMD_REDY)
     {
@@ -332,7 +330,7 @@ int receive_packet(struct _osdg_connection *client)
         protocolVer.minor = PROTOCOL_VERSION_MINOR;
         /* TODO: Implement client properties */
 
-        return sendMESG(client, MSG_PROTOCOL_VERSION, &protocolVer);
+        ret = sendMESG(client, MSG_PROTOCOL_VERSION, &protocolVer);
     }
     else if (header->command == CMD_MESG)
     {
@@ -343,84 +341,22 @@ int receive_packet(struct _osdg_connection *client)
             return -1;
 
         length = SWAP_16(payload->data.size);
-
-        if (client->mode != mode_grid)
-        {
-            // Data from peer are raw data, no type ID
-            DUMP(PROTOCOL, &payload->data.type, length, "Received data from peer");
-            return 0;
-        }
-
-        length -= sizeof(payload->data.type);
-
-        if (payload->data.type == MSG_PROTOCOL_VERSION)
-        {
-            ProtocolVersion *protocolVer = protocol_version__unpack(NULL, length, payload->data.data);
-
-            if (!protocolVer)
-            {
-                LOG(ERRORS, "MSG_PROTOCOL_VERSION protobuf decoding error");
-                client->errorKind = osdg_protocol_error;
-                return -1;
-            }
-
-            if (protocolVer->magic != PROTOCOL_VERSION_MAGIC)
-            {
-                LOG(ERRORS, "Incorrect protocol version magic 0x%08X", protocolVer->magic);
-                ret = -1;
-            }
-            else if (protocolVer->major != PROTOCOL_VERSION_MAJOR || protocolVer->minor != PROTOCOL_VERSION_MINOR)
-            {
-                LOG(ERRORS, "Unsupported server protocol version %u.%u", protocolVer->major, protocolVer->minor);
-                ret = -1;
-            }
-            else
-            {
-                LOG(PROTOCOL, "Using protocol version %u.%u", protocolVer->major, protocolVer->minor);
-                ret = 0; /* We're done with the handshake */
-                /* TODO: Implement user notification */
-            }
-
-            protocol_version__free_unpacked(protocolVer, NULL);
-
-            if (ret)
-            {
-                client->errorKind = osdg_protocol_error;
-                return ret;
-            }
-        }
-        else if (payload->data.type = MSG_REMOTE_REPLY)
-        {
-            PeerReply *reply = peer_reply__unpack(NULL, length, payload->data.data);
-
-            if (!reply)
-            {
-                DUMP(ERRORS, payload->data.data, length, "MSG_REMOTE_REPLY protobuf decoding error");
-                return 0; /* Ignore */
-            }
-
-            ret = peer_handle_remote_call_reply(reply);
-            peer_reply__free_unpacked(reply, NULL);
-
-            return ret;
-        }
-        else
-        {
-            DUMP(PROTOCOL, payload->data.data, length,
-                 "Unhandled MESG type %u length %u bytes:", payload->data.type, length);
-        }
+        ret = connection_receive_data(client, payload->data.data, length);
+        if (ret)
+            client->errorKind = osdg_protocol_error;
     }
     else
     {
         LOG(ERRORS, "Unknown packet received; ignoring");
+        ret = 0;
     }
 
-    return 0;
+    return ret;
 }
 
 int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data)
 {
-  size_t dataSize = protobuf_c_message_get_packed_size(data);
+  size_t dataSize = protobuf_c_message_get_packed_size(data) + 1;
   size_t packetSize = sizeof(struct packetMESG) + dataSize;
   struct packetMESG *mesg;
   struct mesg_payload *payload;
@@ -440,9 +376,9 @@ int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void
   payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
 
   zero_pad(payload->outerPad);
-  payload->data.size = SWAP_16(dataSize + sizeof(payload->data.type));
-  payload->data.type = dataType;
-  protobuf_c_message_pack(data, payload->data.data);
+  payload->data.size = SWAP_16(dataSize);
+  payload->data.data[0] = dataType;
+  protobuf_c_message_pack(data, &payload->data.data[1]);
 
   build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(client));
   res = crypto_box_afternm((unsigned char *)payload, (unsigned char *)payload,
@@ -474,13 +410,13 @@ static int sendForward(struct _osdg_connection *conn)
     fwd.protocolminor = PROTOCOL_VERSION_MINOR;
     fwd.tunnelid.data = conn->tunnelId;
     fwd.tunnelid.len  = conn->tunnelIdSize;
-    fwd.signature     = "Mdg-NaCl/binary";
+    fwd.signature     = FORWARD_REMOTE_SIGNATURE;
 
-    dataSize = forward_remote__get_packed_size(&fwd);
+    dataSize = forward_remote__get_packed_size(&fwd) + 1;
 
-    pkt->size = SWAP_16(dataSize + sizeof(pkt->type));
-    pkt->type = MSG_FORWARD_REMOTE;
-    forward_remote__pack(&fwd, pkt->data);
+    pkt->size = SWAP_16(dataSize);
+    pkt->data[0] = MSG_FORWARD_REMOTE;
+    forward_remote__pack(&fwd, &pkt->data[1]);
 
     /* We don't need this any more */
     free(conn->tunnelId);
