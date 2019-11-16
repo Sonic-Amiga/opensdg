@@ -1,5 +1,5 @@
 set(TESTAPP_SOURCES main.c pthread_wrapper.h)
-add_executable(opensdg_test ${TESTAPP_SOURCES})
+add_executable(opensdg_test ${TESTAPP_SOURCES} ${PUBLIC_INCLUDE_FILES})
 target_link_libraries(opensdg_test PUBLIC opensdg)
 
 if (MSVC)

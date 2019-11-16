@@ -5,6 +5,8 @@ option(MSVC_STATIC_BUILD "MSVC_STATIC_BUILD" ON)
 
 include_directories(include)
 
+set(PUBLIC_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/opensdg.h)
+
 if (MSVC)
   # Microsoft has their own ideas on C standards, shut them up
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)

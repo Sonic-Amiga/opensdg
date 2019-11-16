@@ -40,7 +40,7 @@ add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
                    COMMAND ${PROTOC} --c_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path ${CMAKE_CURRENT_SOURCE_DIR} protocol.proto
                    DEPENDS protocol.proto) 
 
-add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES})
+add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${PUBLIC_INCLUDE_FILES})
 set_property(TARGET opensdg PROPERTY COMPILE_DEFINITIONS OPENSDG_BUILD)
 target_include_directories(opensdg PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
