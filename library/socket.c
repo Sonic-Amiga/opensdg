@@ -31,13 +31,13 @@ static inline int sockerrno(void)
 
 #endif
 
-static inline void set_socket_error(struct _osdg_client *client)
+static inline void set_socket_error(struct _osdg_connection *client)
 {
     client->errorKind = osdg_socket_error;
     client->errorCode = sockerrno();
 }
 
-int connect_to_host(struct _osdg_client *client, const char *host, unsigned short port)
+int connect_to_host(struct _osdg_connection *client, const char *host, unsigned short port)
 {
     struct addrinfo *addr, *ai;
     int res;
@@ -118,7 +118,7 @@ int connect_to_host(struct _osdg_client *client, const char *host, unsigned shor
     return res;
 }
 
-int receive_data(struct _osdg_client *client)
+int receive_data(struct _osdg_connection *client)
 {
     while (client->bytesLeft)
     {
@@ -143,7 +143,7 @@ int receive_data(struct _osdg_client *client)
 }
 
 /* For simplicity this function is currently blocking */
-int send_data(const unsigned char *buffer, int size, struct _osdg_client *client)
+int send_data(const unsigned char *buffer, int size, struct _osdg_connection *client)
 {
     int ret;
 

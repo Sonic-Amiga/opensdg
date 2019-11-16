@@ -19,13 +19,13 @@ static inline void dump_packet(const char *str, const struct packet_header *head
          "%s: %.4s", str, &header->command);
 }
 
-int send_packet(struct packet_header *header, struct _osdg_client *client)
+int send_packet(struct packet_header *header, struct _osdg_connection *client)
 {
     dump_packet("Sending", header);
     return send_data((const unsigned char *)header, PACKET_SIZE(header), client);
 }
 
-static int sendTELL(struct _osdg_client *client)
+static int sendTELL(struct _osdg_connection *client)
 {
     struct packet_header tell;
 
@@ -36,7 +36,7 @@ static int sendTELL(struct _osdg_client *client)
     return send_packet(&tell, client);
 }
 
-static void *decryptMESG(struct packet_header *header, struct _osdg_client *client, const char *nonce_prefix)
+static void *decryptMESG(struct packet_header *header, struct _osdg_connection *client, const char *nonce_prefix)
 {
     struct packetMESG *mesg = (struct packetMESG *)header;
     unsigned char *payload = mesg->mesg_payload - crypto_box_BOXZEROBYTES;
@@ -60,13 +60,13 @@ static void *decryptMESG(struct packet_header *header, struct _osdg_client *clie
     }
 }
 
-static inline unsigned long long client_get_nonce(struct _osdg_client *client)
+static inline unsigned long long client_get_nonce(struct _osdg_connection *client)
 {
     unsigned long long nonce = client->nonce++;
     return SWAP_64(nonce); /* Our protocol wants bigendian data */
 }
 
-int receive_packet(struct _osdg_client *client)
+int receive_packet(struct _osdg_connection *client)
 {
     int ret;
     unsigned int size;
@@ -418,7 +418,7 @@ int receive_packet(struct _osdg_client *client)
     return 0;
 }
 
-int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data)
+int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data)
 {
   size_t dataSize = protobuf_c_message_get_packed_size(data);
   size_t packetSize = sizeof(struct packetMESG) + dataSize;
@@ -463,7 +463,7 @@ int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *da
   return res;
 }
 
-static int sendForward(struct _osdg_client *conn)
+static int sendForward(struct _osdg_connection *conn)
 {
     ForwardRemote fwd = FORWARD_REMOTE__INIT;
     struct DataPacket *pkt = client_get_buffer(conn);
@@ -491,7 +491,7 @@ static int sendForward(struct _osdg_client *conn)
     return send_data((unsigned char *)pkt, sizeof(struct DataPacket) + (int)dataSize, conn);
 }
 
-int start_connection(struct _osdg_client *conn)
+int start_connection(struct _osdg_connection *conn)
 {
     if (conn->tunnelId)
         return sendForward(conn);

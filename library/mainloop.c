@@ -8,9 +8,9 @@
 #include "client.h"
 #include "mainloop.h"
 
-static struct _osdg_client *connections[MAX_CONNECTIONS];
+static struct _osdg_connection *connections[MAX_CONNECTIONS];
 
-int mainloop_add_connection(struct _osdg_client *conn)
+int mainloop_add_connection(struct _osdg_connection *conn)
 {
     int i;
 
@@ -26,7 +26,7 @@ int mainloop_add_connection(struct _osdg_client *conn)
     return -1;
 }
 
-void mainloop_remove_connection(struct _osdg_client *conn)
+void mainloop_remove_connection(struct _osdg_connection *conn)
 {
     int i;
 
@@ -55,7 +55,7 @@ int osdg_main(void)
 
         for (i = 0; i < MAX_CONNECTIONS; i++)
         {
-            struct _osdg_client *conn = connections[i];
+            struct _osdg_connection *conn = connections[i];
 
             if ((conn == NULL) || (conn->sock == -1))
                 continue;
@@ -81,7 +81,7 @@ int osdg_main(void)
 
         for (i = 0; i < maxconn; i++)
         {
-            struct _osdg_client *conn = connections[i];
+            struct _osdg_connection *conn = connections[i];
 
             if ((conn == NULL) || (conn->sock == -1))
                 continue;

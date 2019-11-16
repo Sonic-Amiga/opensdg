@@ -2,7 +2,7 @@
 #include "mainloop.h"
 #include "socket.h"
 
-int osdg_connect_to_grid(osdg_client_t client, const struct osdg_endpoint *servers)
+int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers)
 {
     unsigned int nServers, left, i, res;
     const struct osdg_endpoint **list, **randomized;

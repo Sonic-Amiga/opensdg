@@ -225,10 +225,10 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
 #define PROTOCOL_VERSION_MINOR   0
 
 void build_header(struct packet_header *header, int cmd, size_t size);
-int send_packet(struct packet_header *header, struct _osdg_client *client);
-int receive_packet(struct _osdg_client *client);
+int send_packet(struct packet_header *header, struct _osdg_connection *client);
+int receive_packet(struct _osdg_connection *client);
 
-int sendMESG(struct _osdg_client *client, unsigned char dataType, const void *data);
-int start_connection(struct _osdg_client *conn);
+int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data);
+int start_connection(struct _osdg_connection *conn);
 
 #endif

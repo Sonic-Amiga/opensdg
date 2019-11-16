@@ -7,7 +7,7 @@
 #include "registry.h"
 #include "socket.h"
 
-int osdg_connect_to_remote(osdg_client_t grid, osdg_client_t peer, osdg_key_t peerId, const char *protocol)
+int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol)
 {
   char peerIdStr[sizeof(osdg_key_t) * 2 + 1];
   ConnectToPeer request = CONNECT_TO_PEER__INIT;
@@ -33,7 +33,7 @@ int osdg_connect_to_remote(osdg_client_t grid, osdg_client_t peer, osdg_key_t pe
 
 int peer_handle_remote_call_reply(PeerReply *reply)
 {
-    struct _osdg_client *peer;
+    struct _osdg_connection *peer;
     int ret;
 
     LOG(PROTOCOL, "Peer[%u] result %d\n", reply->id, reply->result);

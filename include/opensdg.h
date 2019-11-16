@@ -17,7 +17,7 @@ typedef unsigned char osdg_key_t[32];
 
 OSDG_API int osdg_init(const osdg_key_t private_key);
 
-typedef struct _osdg_client *osdg_client_t;
+typedef struct _osdg_connection *osdg_connection_t;
 
 struct osdg_endpoint
 {
@@ -25,10 +25,10 @@ struct osdg_endpoint
   unsigned int port;
 };
 
-OSDG_API osdg_client_t osdg_connection_create(void);
-OSDG_API void osdg_connection_destroy(osdg_client_t client);
+OSDG_API osdg_connection_t osdg_connection_create(void);
+OSDG_API void osdg_connection_destroy(osdg_connection_t client);
 
-OSDG_API int osdg_connect_to_grid(osdg_client_t client, const struct osdg_endpoint *servers);
+OSDG_API int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
 
 enum osdg_error_kind
 {
@@ -43,11 +43,11 @@ enum osdg_error_kind
   osdg_memory_error        /* Memory (e. g. buffers) allocation error */
 };
 
-OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_client_t client);
-OSDG_API int osdg_get_error_code(osdg_client_t client);
-OSDG_API const unsigned char *osdg_get_peer_id(osdg_client_t conn);
+OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client);
+OSDG_API int osdg_get_error_code(osdg_connection_t client);
+OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
-OSDG_API int osdg_connect_to_remote(osdg_client_t grid, osdg_client_t peer, osdg_key_t peerId, const char *protocol);
+OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol);
 
 OSDG_API int osdg_main(void);
 

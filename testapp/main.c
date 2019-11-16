@@ -100,7 +100,7 @@ static int read_file(void *buffer, int size, const char *name)
     return res == 1 ? 0 : -1;
 }
 
-static void print_client_error(osdg_client_t client)
+static void print_client_error(osdg_connection_t client)
 {
   enum osdg_error_kind kind = osdg_get_error_kind(client);
 
@@ -202,7 +202,7 @@ static void list_pairings(void)
   }
 }
 
-static osdg_client_t peers[MAX_PEERS];
+static osdg_connection_t peers[MAX_PEERS];
 static unsigned int num_peers = 0;
 
 static int get_peer_number(void)
@@ -233,12 +233,12 @@ static void list_peers(void)
   }
 }
 
-static void connect_to_peer(osdg_client_t client, char *argStr)
+static void connect_to_peer(osdg_connection_t client, char *argStr)
 {
   unsigned int idx = get_peer_number();
   const char *arg;
   osdg_key_t peerId;
-  osdg_client_t peer;
+  osdg_connection_t peer;
   int res;
 
   if (idx == -1)
@@ -307,7 +307,7 @@ static const struct osdg_endpoint servers[] =
 int main()
 {
   osdg_key_t clientKey;
-  osdg_client_t client;
+  osdg_connection_t client;
   int r;
 
   /* This switches off DOS compatibility mode on Windows console */

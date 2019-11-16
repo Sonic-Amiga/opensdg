@@ -31,13 +31,13 @@ int osdg_init(const osdg_key_t private_key)
     return 0;
 }
 
-static inline void client_put_buffer_nolock(struct _osdg_client *client, struct osdg_buffer *buffer)
+static inline void client_put_buffer_nolock(struct _osdg_connection *client, struct osdg_buffer *buffer)
 {
   buffer->next = client->bufferQueue;
   client->bufferQueue = buffer;
 }
 
-int connection_allocate_buffers(struct _osdg_client *conn)
+int connection_allocate_buffers(struct _osdg_connection *conn)
 {
     int i;
 
@@ -61,9 +61,9 @@ int connection_allocate_buffers(struct _osdg_client *conn)
     return 0;
 }
 
-osdg_client_t osdg_connection_create(void)
+osdg_connection_t osdg_connection_create(void)
 {
-  struct _osdg_client *client = malloc(sizeof(struct _osdg_client));
+  struct _osdg_connection *client = malloc(sizeof(struct _osdg_connection));
   
   if (!client)
     return NULL;
@@ -88,7 +88,7 @@ osdg_client_t osdg_connection_create(void)
   return client;
 }
 
-void connection_shutdown(struct _osdg_client *client)
+void connection_shutdown(struct _osdg_connection *client)
 {
     registry_remove_connection(client);
 
@@ -113,7 +113,7 @@ void connection_shutdown(struct _osdg_client *client)
     }
 }
 
-void osdg_connection_destroy(osdg_client_t client)
+void osdg_connection_destroy(osdg_connection_t client)
 {
   struct osdg_buffer *buffer, *next;
 
@@ -129,22 +129,22 @@ void osdg_connection_destroy(osdg_client_t client)
   free(client);
 }
 
-enum osdg_error_kind osdg_get_error_kind(osdg_client_t client)
+enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client)
 {
   return client->errorKind;
 }
 
-int osdg_get_error_code(osdg_client_t client)
+int osdg_get_error_code(osdg_connection_t client)
 {
   return client->errorCode;
 }
 
-const unsigned char *osdg_get_peer_id(osdg_client_t conn)
+const unsigned char *osdg_get_peer_id(osdg_connection_t conn)
 {
     return conn->serverPubkey;
 }
 
-void *client_get_buffer(struct _osdg_client *client)
+void *client_get_buffer(struct _osdg_connection *client)
 {
   struct osdg_buffer *buffer;
 
@@ -162,14 +162,14 @@ void *client_get_buffer(struct _osdg_client *client)
   return buffer;
 }
 
-void client_put_buffer(struct _osdg_client *client, void *ptr)
+void client_put_buffer(struct _osdg_connection *client, void *ptr)
 {
   pthread_mutex_lock(&client->bufferMutex);
   client_put_buffer_nolock(client, ptr);
   pthread_mutex_unlock(&client->bufferMutex);
 }
 
-void connection_read_data(struct _osdg_client *conn)
+void connection_read_data(struct _osdg_connection *conn)
 {
     int ret;
 

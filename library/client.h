@@ -20,7 +20,7 @@ enum connection_mode
     mode_peer
 };
 
-struct _osdg_client
+struct _osdg_connection
 {
   UT_hash_handle       hh;
   int                  uid;
@@ -49,12 +49,12 @@ struct _osdg_client
 extern unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
 extern unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
 
-int connection_allocate_buffers(struct _osdg_client *conn);
-void *client_get_buffer(struct _osdg_client *conn);
-void client_put_buffer(struct _osdg_client *conn, void *buffer);
+int connection_allocate_buffers(struct _osdg_connection *conn);
+void *client_get_buffer(struct _osdg_connection *conn);
+void client_put_buffer(struct _osdg_connection *conn, void *buffer);
 
-void connection_read_data(struct _osdg_client *conn);
-void connection_shutdown(struct _osdg_client *conn);
+void connection_read_data(struct _osdg_connection *conn);
+void connection_shutdown(struct _osdg_connection *conn);
 
 int peer_handle_remote_call_reply(PeerReply *reply);
 
