@@ -53,8 +53,6 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     struct _osdg_connection *peer;
     int ret;
 
-    LOG(PROTOCOL, "Peer[%u] result %d\n", reply->id, reply->result);
-
     peer = registry_find_connection(reply->id);
     if (!peer)
     {
@@ -63,6 +61,13 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     }
 
     registry_remove_connection(peer);
+
+    if (reply->result || (!reply->peer))
+    {
+        LOG(CONNECTION, "Peer[%u] connection refused; code %d", reply->id, reply->result);
+        peer->errorKind = osdg_connection_failed;
+        return 0;
+    }
 
     DUMP(PROTOCOL, reply->peer->tunnelid.data, reply->peer->tunnelid.len,
          "Peer[%u] Forwarding ready at %s:%u tunnel", reply->id,
