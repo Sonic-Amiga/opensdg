@@ -22,13 +22,13 @@ int mainloop_add_connection(struct _osdg_connection *conn)
     e = WSACreateEvent();
     if (e == NULL)
     {
-        client->errorKind = osdg_socket_error;
-        client->errorCode = sockerrno();
+        conn->errorKind = osdg_socket_error;
+        conn->errorCode = sockerrno();
         return -1;
     }
 
     /* This should not fail if WSACreateEvent() worked */
-    WSAEventSelect(client->sock, e, FD_READ|FD_CLOSE);
+    WSAEventSelect(conn->sock, e, FD_READ|FD_CLOSE);
 
     events[num_connections] = e;
     connections[num_connections++] = conn;
@@ -37,7 +37,7 @@ int mainloop_add_connection(struct _osdg_connection *conn)
 
 void mainloop_remove_connection(struct _osdg_connection *conn)
 {
-    int i;
+    unsigned int i;
 
     for (i = 0; i < num_connections; i++)
     {
@@ -48,7 +48,7 @@ void mainloop_remove_connection(struct _osdg_connection *conn)
     if (i == num_connections)
         return;
 
-    WSAEventSelect(client->sock, events[i], 0);
+    WSAEventSelect(conn->sock, events[i], 0);
     WSACloseEvent(events[i]);
 
     if (i != --num_connections)
@@ -68,8 +68,11 @@ int osdg_main(void)
 
         if (r >= WSA_WAIT_EVENT_0 && r < WSA_WAIT_EVENT_0 + num_connections)
         {
-            struct _osdg_connection *conn = connections[r - WSA_WAIT_EVENT_0];
-            connection_read_data(conn);
+            int idx = r - WSA_WAIT_EVENT_0;
+
+            /* WSA events do not auto-reset */
+            WSAResetEvent(events[idx]);
+            connection_read_data(connections[idx]);
         }
         else if (r == WSA_WAIT_FAILED)
         {

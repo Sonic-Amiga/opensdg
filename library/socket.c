@@ -80,6 +80,7 @@ int connect_to_host(struct _osdg_connection *client, const char *host, unsigned 
             static unsigned long nonblock = 1;
  
             LOG(CONNECTION, "Connected to %s:%u", host, port);
+#ifndef _WIN32 /* TODO: Move to UNIX mainloop */
             res = ioctlsocket(s, FIONBIO, &nonblock);
             if (res)
             {
@@ -88,9 +89,15 @@ int connect_to_host(struct _osdg_connection *client, const char *host, unsigned 
                 closesocket(s);
                 break; /* It's a serious error, will return -1 */
             }
+#endif
 
             client->sock = s;
-            mainloop_add_connection(client);
+            res = mainloop_add_connection(client);
+            if (res == -1)
+            {
+                connection_shutdown(client);
+                break;
+            }
 
             res = start_connection(client);
             if (!res)

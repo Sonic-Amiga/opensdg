@@ -32,7 +32,7 @@ message("libprotobuf-c found in ${PROTOBUF}")
 set(LIBRARY_SOURCES client.c client.h logging.c logging.h
                     protocol.c protocol.h grid.c peer.c
 					registry.c registry.h socket.c socket.h
-					mainloop.c mainloop.h utils.c
+					mainloop.h utils.c
 					uthash.h pthread_wrapper.h)
 set(PROTOBUF_SOURCES protocol.pb-c.c protocol.pb-c.h)
 
@@ -46,7 +46,7 @@ add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
                    COMMAND ${PROTOC} --c_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path ${CMAKE_CURRENT_SOURCE_DIR} protocol.proto
                    DEPENDS protocol.proto) 
 
-add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${PUBLIC_INCLUDE_FILES})
+add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${SYSDEP_SOURCES} ${PUBLIC_INCLUDE_FILES})
 set_property(TARGET opensdg PROPERTY COMPILE_DEFINITIONS OPENSDG_BUILD)
 target_include_directories(opensdg PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
