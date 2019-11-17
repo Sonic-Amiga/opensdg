@@ -6,48 +6,7 @@
 #define FD_SETSIZE MAX_CONNECTIONS
 
 #include "client.h"
-#include "logging.h"
 #include "mainloop.h"
-#include "registry.h"
-
-int osdg_init(void)
-{
-    if (sodium_init() == -1)
-    {
-        LOG(ERRORS, "libsodium init failed");
-        return -1;
-    }
-
-#ifdef _WIN32
-    WSADATA wsData;
-    int res = WSAStartup(MAKEWORD(2, 2), &wsData);
-
-    if (res)
-    {
-        char *str;
-
-        FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL, res, LANG_USER_DEFAULT, (LPSTR)&str, 1, NULL);
-
-        LOG(ERRORS, "Winsock 2.2 init failed: %s", str);
-        LocalFree(str);
-
-        return -1;
-    }
-#endif
-
-    registry_init();
-
-    return 0;
-}
-
-void osdg_shutdown(void)
-{
-    registry_shutdown();
-#ifdef _WIN32
-    WSACleanup();
-#endif
-}
 
 static struct _osdg_connection *connections[MAX_CONNECTIONS];
 
