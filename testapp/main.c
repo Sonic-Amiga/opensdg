@@ -253,6 +253,9 @@ static void grid_status_changed(osdg_connection_t conn, enum osdg_connection_sta
 {
     printf("Grid");
     print_status(conn, status);
+
+    if (status == osdg_closed)
+        osdg_connection_destroy(conn);
 }
 
 static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_status status)
@@ -262,7 +265,7 @@ static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_sta
     printf("Peer #%d", idx);
     print_status(conn, status);
 
-    if (status == osdg_closed || status == osdg_error)
+    if (status == osdg_closed)
     {
         peers[idx] = NULL;
         osdg_connection_destroy(conn);
@@ -511,7 +514,7 @@ int main(int argc, const char *const *argv)
     print_client_error(client);
   }
 
-  osdg_connection_destroy(client);
+  osdg_connection_close(client);
 
   osdg_shutdown();
   return 0;
