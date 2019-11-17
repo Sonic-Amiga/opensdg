@@ -14,21 +14,23 @@ static WSAEVENT events[MAX_CONNECTIONS];
 
 int mainloop_add_connection(struct _osdg_connection *conn)
 {
-    int i;
+    WSAEVENT e;
 
     if (num_connections == MAX_CONNECTIONS)
         return -1;
 
-    events[i] = WSACreateEvent();
-    if (events[i] == NULL)
+    e = WSACreateEvent();
+    if (e == NULL)
     {
         client->errorKind = osdg_socket_error;
         client->errorCode = sockerrno();
         return -1;
     }
 
-    WSAEventSelect(client->sock, events[i], FD_READ|FD_CLOSE);
+    /* This should not fail if WSACreateEvent() worked */
+    WSAEventSelect(client->sock, e, FD_READ|FD_CLOSE);
 
+    events[num_connections] = e;
     connections[num_connections++] = conn;
     return 0;
 }
