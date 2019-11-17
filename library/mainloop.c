@@ -18,11 +18,35 @@ int osdg_init(void)
         return -1;
     }
 
+#ifdef _WIN32
+    WSADATA wsData;
+    int res = WSAStartup(MAKEWORD(2, 2), &wsData);
+
+    if (res)
+    {
+        char *str;
+
+        FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, res, LANG_USER_DEFAULT, (LPSTR)&str, 1, NULL);
+
+        LOG(ERRORS, "Winsock 2.2 init failed: %s", str);
+        LocalFree(str);
+
+        return -1;
+    }
+#endif
+
     registry_init();
 
-    /* TODO: Move Winsock init here */
-
     return 0;
+}
+
+void osdg_shutdown(void)
+{
+    registry_shutdown();
+#ifdef _WIN32
+    WSACleanup();
+#endif
 }
 
 static struct _osdg_connection *connections[MAX_CONNECTIONS];

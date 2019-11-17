@@ -12,6 +12,11 @@ void registry_init(void)
     pthread_mutex_init(&lock, NULL);
 }
 
+void registry_shutdown(void)
+{
+    pthread_mutex_destroy(&lock);
+}
+
 void registry_add_connection(struct _osdg_connection *conn)
 {
     pthread_mutex_lock(&lock);

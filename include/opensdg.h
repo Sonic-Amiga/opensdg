@@ -64,6 +64,7 @@ OSDG_API int osdg_get_error_code(osdg_connection_t client);
 OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
 OSDG_API int osdg_init(void);
+OSDG_API void osdg_shutdown(void);
 OSDG_API int osdg_main(void);
 
 /* Log masks */

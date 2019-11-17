@@ -27,31 +27,11 @@ static void printWSAError(const char *msg, int err)
     LocalFree(str);
 }
 
-static void initSockets(void)
-{
-  WSADATA wsData;
-  int err = WSAStartup(MAKEWORD(2, 2), &wsData);
-
-  if (err)
-  {
-    printWSAError("Failed to initialize winsock", err);
-    exit(255);
-  }
-}
-
 #else
 
 static void printWSAError(const char *msg, int err)
 {
   fprintf(stderr, "%s: %s\n", msg, strerror(err));
-}
-
-static inline void initSockets(void)
-{
-}
-
-static inline void WSACleanup(void)
-{
 }
 
 #endif
@@ -399,8 +379,6 @@ int main(int argc, const char *const *argv)
       return 255;
   }
 
-  initSockets();
-
   r = read_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
   if (!r)
   {
@@ -497,7 +475,7 @@ int main(int argc, const char *const *argv)
   }
 
   osdg_connection_destroy(client);
-  WSACleanup();
 
+  osdg_shutdown();
   return 0;
 }
