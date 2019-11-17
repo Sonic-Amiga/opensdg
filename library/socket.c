@@ -6,7 +6,7 @@
 
 #include <WS2tcpip.h>
 
-static int sockerrno(void)
+int sockerrno(void)
 {
     int wsaErr = WSAGetLastError();
 
@@ -25,11 +25,6 @@ static int sockerrno(void)
 #else
 
 #include <netdb.h>
-
-static inline int sockerrno(void)
-{
-    return errno;
-}
 
 #endif
 
