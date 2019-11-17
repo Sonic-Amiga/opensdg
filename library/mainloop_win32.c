@@ -34,22 +34,10 @@ void mainloop_shutdown(void)
     queue_destroy(&requests);
 }
 
-enum request_code
+void mainloop_send_client_request(struct client_req *req)
 {
-    REQUEST_ADD
-};
-
-static inline void send_client_request(struct client_req *req, enum request_code code)
-{
-    req->code = code;
     queue_put(&requests, &req->qe);
     WSASetEvent(events[0]);
-}
-
-int mainloop_add_connection(struct _osdg_connection *conn)
-{
-    send_client_request(&conn->req, REQUEST_ADD);
-    return 0;
 }
 
 void mainloop_remove_connection(struct _osdg_connection *conn)
@@ -117,6 +105,11 @@ static void handle_client_requests(void)
         {
         case REQUEST_ADD:
             res = handle_add_connection(conn);
+            break;
+        case REQUEST_CLOSE:
+            mainloop_remove_connection(conn);
+            connection_shutdown(conn);
+            connection_set_status(conn, osdg_closed);
             break;
         }
 

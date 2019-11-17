@@ -15,10 +15,16 @@ struct osdg_buffer
   struct osdg_buffer *next;
 };
 
+enum request_code
+{
+    REQUEST_ADD,
+    REQUEST_CLOSE
+};
+
 struct client_req
 {
     struct queue_element qe;
-    unsigned int         code;
+    enum request_code    code;
 };
 
 enum connection_mode

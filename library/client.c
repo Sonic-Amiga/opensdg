@@ -101,11 +101,18 @@ void connection_shutdown(struct _osdg_connection *client)
     }
 }
 
+int osdg_connection_close(osdg_connection_t client)
+{
+    client->req.code = REQUEST_CLOSE;
+    mainloop_send_client_request(&client->req);
+
+    /* TODO: Check for dumb things like double close */
+    return 0;
+}
+
 void osdg_connection_destroy(osdg_connection_t client)
 {
   struct osdg_buffer *buffer, *next;
-
-  connection_shutdown(client);
 
   for (buffer = client->bufferQueue; buffer; buffer = next)
   {
@@ -187,6 +194,7 @@ void connection_read_data(struct _osdg_connection *conn)
     if (ret)
     {
         LOG(ERRORS, "Connection %p died", conn);
+        mainloop_remove_connection(conn);
         connection_shutdown(conn);
         connection_set_status(conn, osdg_error);
     }

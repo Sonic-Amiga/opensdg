@@ -233,6 +233,9 @@ static void print_status(osdg_connection_t conn, enum osdg_connection_t status)
 {
     switch (status)
     {
+    case osdg_closed:
+        printf(" connection closed\n");
+        break;
     case osdg_connected:
         printf(" connection established\n");
         break;
@@ -258,6 +261,12 @@ static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_sta
 
     printf("Peer #%d", idx);
     print_status(conn, status);
+
+    if (status == osdg_closed || status == osdg_error)
+    {
+        peers[idx] = NULL;
+        osdg_connection_destroy(conn);
+    }
 }
 
 static int default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
@@ -347,6 +356,23 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
   if (idx == num_peers)
     num_peers++;
 }
+
+static void close_connection(char *argStr)
+{
+    const char *arg = getWord(&argStr);
+    char *end;
+    unsigned int idx = strtoul(arg, &end, 10);
+
+    if (arg == end || idx >= num_peers || peers[idx] == NULL)
+    {
+        printf("Invalid peer index %s!\n", arg);
+        return;
+    }
+
+    osdg_connection_close(peers[idx]);
+    peers[idx] = NULL;
+}
+
 
 /* Danfoss cloud servers */
 static const struct osdg_endpoint servers[] =
@@ -455,6 +481,10 @@ int main(int argc, const char *const *argv)
         else if (!strcmp(cmd, "connect"))
         {
           connect_to_peer(client, p);
+        }
+        else if (!strcmp(cmd, "close"))
+        {
+            close_connection(p);
         }
         else if (!strcmp(cmd, "list"))
         {

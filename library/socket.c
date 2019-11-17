@@ -90,18 +90,13 @@ int connect_to_host(struct _osdg_connection *client, const char *host, unsigned 
                 break; /* It's a serious error, will return -1 */
             }
 #endif
-
             client->sock = s;
-            res = mainloop_add_connection(client);
-            if (res == -1)
-            {
-                connection_shutdown(client);
-                break;
-            }
 
             res = start_connection(client);
             if (!res)
             {
+                client->req.code = REQUEST_ADD;
+                mainloop_send_client_request(&client->req);
                 res = 1; /* Connected */
                 break;
             }
