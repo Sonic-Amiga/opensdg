@@ -14,6 +14,8 @@ static int sockerrno(void)
     {
     case WSAEWOULDBLOCK:
         return EWOULDBLOCK;
+    case WSAEINTR:
+        return EINTR;
     /* TODO: Translate other errors here */
     default:
         return wsaErr;
@@ -168,8 +170,14 @@ int send_data(const unsigned char *buffer, int size, struct _osdg_connection *cl
             ret = select((int)client->sock + 1, NULL, &wfds, NULL, NULL);
             if (ret < 0)
             {
-                set_socket_error(client);
-                return -1;
+                int err = sockerrno();
+
+                if (err != EINTR)
+                {
+                    client->errorKind = osdg_socket_error;
+                    client->errorCode = err;
+                    return -1;
+                }
             }
         }
         else

@@ -116,7 +116,13 @@ int osdg_main(void)
 
         r = select(maxfd + 1, &rset, NULL, NULL, NULL);
         if (r == -1)
+        {
+#ifndef _WIN32
+            if (errno == EINTR)
+              continue;
+#endif
             return -1; /* OS error code will be set */
+        }
         if (r == 0)
            continue; /* Shouldn't happen */
 
