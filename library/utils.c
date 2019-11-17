@@ -6,8 +6,18 @@
 #include "registry.h"
 #include "utils.h"
 
+#ifndef _WIN32
+
+static inline void WSACleanup()
+{
+}
+
+#endif
+
 int osdg_init(void)
 {
+    int res;
+
     if (sodium_init() == -1)
     {
         LOG(ERRORS, "libsodium init failed");
@@ -16,8 +26,8 @@ int osdg_init(void)
 
 #ifdef _WIN32
     WSADATA wsData;
-    int res = WSAStartup(MAKEWORD(2, 2), &wsData);
 
+    res = WSAStartup(MAKEWORD(2, 2), &wsData);
     if (res)
     {
         char *str;
@@ -33,17 +43,25 @@ int osdg_init(void)
 #endif
 
     registry_init();
-    return mainloop_init();
+    mainloop_events_init();
+
+    res = mainloop_init();
+    if (!res)
+        return 0;
+
+    mainloop_events_shutdown();
+    registry_shutdown();
+    WSACleanup();
+    return -1;
 }
 
 void osdg_shutdown(void)
 {
 //  FIXME: Stop the thread before doing this
 //    mainloop_shutdown();
+//    mainloop_events_shutdown();
     registry_shutdown();
-#ifdef _WIN32
     WSACleanup();
-#endif
 }
 
 void osdg_create_private_key(osdg_key_t key)

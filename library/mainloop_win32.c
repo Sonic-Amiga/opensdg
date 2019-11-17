@@ -13,8 +13,6 @@ static struct _osdg_connection *connections[MAX_CONNECTIONS];
 static DWORD num_connections = 0;
 static WSAEVENT events[MAX_CONNECTIONS + 1];
 
-static struct queue requests;
-
 int mainloop_init(void)
 {
     WSAEVENT e = WSACreateEvent();
@@ -22,21 +20,17 @@ int mainloop_init(void)
     if (!e)
         return -1;
 
-    queue_init(&requests);
     events[0] = e;
-
     return 0;
 }
 
 void mainloop_shutdown(void)
 {
     WSACloseEvent(events[0]);
-    queue_destroy(&requests);
 }
 
-void mainloop_send_client_request(struct client_req *req)
+void mainloop_client_event(void)
 {
-    queue_put(&requests, &req->qe);
     WSASetEvent(events[0]);
 }
 
@@ -65,7 +59,7 @@ void mainloop_remove_connection(struct _osdg_connection *conn)
     }
 }
 
-static int handle_add_connection(struct _osdg_connection *conn)
+int mainloop_add_connection(struct _osdg_connection *conn)
 {
     WSAEVENT e;
 
@@ -92,35 +86,6 @@ static int handle_add_connection(struct _osdg_connection *conn)
     return 0;
 }
 
-static void handle_client_requests(void)
-{
-    struct client_req *req;
-
-    while (req = queue_get(&requests))
-    {
-        struct _osdg_connection *conn = (struct _osdg_connection *)req;
-        int res = 0;
-
-        switch (req->code)
-        {
-        case REQUEST_ADD:
-            res = handle_add_connection(conn);
-            break;
-        case REQUEST_CLOSE:
-            mainloop_remove_connection(conn);
-            connection_shutdown(conn);
-            connection_set_status(conn, osdg_closed);
-            break;
-        }
-
-        if (res)
-        {
-            connection_shutdown(conn);
-            connection_set_status(conn, osdg_error);
-        }
-    }
-}
-
 int osdg_main(void)
 {
     for (;;)
@@ -130,7 +95,7 @@ int osdg_main(void)
         if (r == WSA_WAIT_EVENT_0)
         {
             WSAResetEvent(events[0]);
-            handle_client_requests();
+            mainloop_handle_client_requests();
         }
         else if (r > WSA_WAIT_EVENT_0 && r <= WSA_WAIT_EVENT_0 + num_connections)
         {
