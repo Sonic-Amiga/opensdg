@@ -56,39 +56,6 @@ static inline void WSACleanup(void)
 
 #endif
 
-static int hexchar2bin(char c)
-{
-  if (c >= '0' && c <= '9')
-    return c - '0';
-  else if (c >= 'A' && c <= 'F')
-    return c - 'A' + 10;
-  else if (c >= 'a' && c <= 'f')
-    return c - 'a' + 10;
-  else
-    return -1;
-}
-
-static int hex2bin(unsigned char *bin, unsigned int len, const char *hex)
-{
-  unsigned int i, j;
-
-  for (i = 0; i < len; i++)
-  {
-    int digit[2];
-
-    for (j = 0; j < 2; j++)
-    {
-      digit[j] = hexchar2bin(hex[i * 2 + j]);
-      if (digit[j] == -1)
-        return -1;
-    }
-
-    bin[i] = (digit[0] << 4) + digit[1];
-  }
-
-  return hex[len * 2] ? -1 : 0;
-}
-
 static int read_file(void *buffer, int size, const char *name)
 {
     FILE *f = fopen(name, "rb");
@@ -101,6 +68,25 @@ static int read_file(void *buffer, int size, const char *name)
 
     fclose(f);
     return res == 1 ? 0 : -1;
+}
+
+static int write_file(void *buffer, int size, const char *name)
+{
+    FILE *f = fopen(name, "wb");
+    size_t res;
+
+    if (!f)
+        return -1;
+
+    res = fwrite(buffer, size, 1, f);
+
+    fclose(f);
+
+    if (res == 1)
+        return 0;
+
+    printf("Failed to write file %s!\n", name);
+    return -1;
 }
 
 static void print_client_error(osdg_connection_t client)
@@ -288,7 +274,7 @@ static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_sta
 static int default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
 {
     printf("Received data from the peer: ");
-    hexdump(data, length);
+    dump_data(data, length);
     return 0;
 }
 
@@ -310,7 +296,10 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
   arg = getWord(&argStr);
   if (strlen(arg) == 64)
   {
-    if (hex2bin(peerId, sizeof(peerId), arg) != 0)
+    size_t keyLen = 0;
+
+    res = osdg_hex_to_bin(peerId, sizeof(peerId), arg, 64, NULL, &keyLen, NULL);
+    if (res || (keyLen != sizeof(peerId)))
     {
       printf("Invalid peerID %s!\n", arg);
       return;
@@ -387,6 +376,9 @@ int main(int argc, const char *const *argv)
   osdg_connection_t client;
   int i, r;
 
+  /* This switches off DOS compatibility mode on Windows console */
+  setlocale(LC_ALL, "");
+
   for (i = 1; i < argc; i++)
   {
       if (!strcmp(argv[i], "-l"))
@@ -397,28 +389,37 @@ int main(int argc, const char *const *argv)
       }
   }
 
+  /* The only thing we can call before osdg_init() */
   osdg_set_log_mask(logmask);
 
-  /* This switches off DOS compatibility mode on Windows console */
-  setlocale(LC_ALL, "");
+  r = osdg_init();
+  if (r)
+  {
+      printf("Failed to initialize OSDG!\n");
+      return 255;
+  }
+
   initSockets();
 
   r = read_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
-  if (r)
+  if (!r)
   {
-      /* TODO: Generate and save the key */
-      printf("Failed to load private key! Leaving uninitialized!\n");
+    printf("Loaded private key: ");
+    dump_data(clientKey, sizeof(clientKey));
+  }
+  else
+  {
+      osdg_create_private_key(clientKey);
+      printf("Generated private key: ");
+      dump_data(clientKey, sizeof(clientKey));
+      write_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
   }
 
   r = read_file(&pairings, sizeof(pairings), "osdg_test_pairings.bin");
   if (r)
     pairings.count = 0;
 
-  if (osdg_init(clientKey))
-  {
-      printf("osdg_init() failed!\n");
-      return 255;
-  }
+  osdg_set_private_key(clientKey);
 
   client = osdg_connection_create();
   if (!client)

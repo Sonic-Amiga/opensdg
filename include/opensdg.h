@@ -15,7 +15,8 @@
 
 typedef unsigned char osdg_key_t[32];
 
-OSDG_API int osdg_init(const osdg_key_t private_key);
+OSDG_API void osdg_set_private_key(const osdg_key_t private_key);
+OSDG_API void osdg_create_private_key(osdg_key_t key);
 
 typedef struct _osdg_connection *osdg_connection_t;
 
@@ -62,6 +63,7 @@ OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client);
 OSDG_API int osdg_get_error_code(osdg_connection_t client);
 OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
+OSDG_API int osdg_init(void);
 OSDG_API int osdg_main(void);
 
 /* Log masks */
@@ -71,5 +73,9 @@ OSDG_API int osdg_main(void);
 #define OSDG_LOG_PACKETS    0x08 /* Raw packets */
 
 OSDG_API osdg_set_log_mask(unsigned int mask);
+
+OSDG_API void osdg_bin_to_hex(char *hex, size_t hex_size, const unsigned char *bin, size_t bin_size);
+OSDG_API int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsigned char *hex, size_t hex_size,
+                             const char *ignore, size_t *bin_size, const char **end_ptr);
 
 #endif

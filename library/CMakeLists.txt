@@ -32,7 +32,7 @@ message("libprotobuf-c found in ${PROTOBUF}")
 set(LIBRARY_SOURCES client.c client.h logging.c logging.h
                     protocol.c protocol.h grid.c peer.c
 					registry.c registry.h socket.c socket.h
-					mainloop.c mainloop.h
+					mainloop.c mainloop.h utils.c
 					uthash.h pthread_wrapper.h)
 set(PROTOBUF_SOURCES protocol.pb-c.c protocol.pb-c.h)
 

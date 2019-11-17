@@ -6,7 +6,24 @@
 #define FD_SETSIZE MAX_CONNECTIONS
 
 #include "client.h"
+#include "logging.h"
 #include "mainloop.h"
+#include "registry.h"
+
+int osdg_init(void)
+{
+    if (sodium_init() == -1)
+    {
+        LOG(ERRORS, "libsodium init failed");
+        return -1;
+    }
+
+    registry_init();
+
+    /* TODO: Move Winsock init here */
+
+    return 0;
+}
 
 static struct _osdg_connection *connections[MAX_CONNECTIONS];
 

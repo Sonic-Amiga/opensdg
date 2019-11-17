@@ -12,23 +12,11 @@
 unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
 unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
 
-int osdg_init(const osdg_key_t private_key)
+void osdg_set_private_key(const osdg_key_t private_key)
 {
-    if (sodium_init() == -1)
-    {
-        LOG(ERRORS, "libsodium init failed");
-        return -1;
-    }
-
-    registry_init();
-
-    /* TODO: Move Winsock init here */
-
     memcpy(clientSecret, private_key, sizeof(clientSecret));
     /* Compute the public key */
     crypto_scalarmult_base(clientPubkey, clientSecret);
-
-    return 0;
 }
 
 static inline void client_put_buffer_nolock(struct _osdg_connection *client, struct osdg_buffer *buffer)
