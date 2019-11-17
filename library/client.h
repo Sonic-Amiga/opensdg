@@ -8,10 +8,17 @@
 #include "protocol.h"
 #include "protocol.pb-c.h"
 #include "uthash.h"
+#include "utils.h"
 
 struct osdg_buffer
 {
   struct osdg_buffer *next;
+};
+
+struct client_req
+{
+    struct queue_element qe;
+    unsigned int         code;
 };
 
 enum connection_mode
@@ -23,6 +30,7 @@ enum connection_mode
 
 struct _osdg_connection
 {
+  struct client_req    req;
   UT_hash_handle       hh;
   int                  uid;
   SOCKET               sock;

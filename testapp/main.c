@@ -34,6 +34,11 @@ static void printWSAError(const char *msg, int err)
   fprintf(stderr, "%s: %s\n", msg, strerror(err));
 }
 
+static inline int WSAGetLastError(void)
+{
+    return errno;
+}
+
 #endif
 
 static int read_file(void *buffer, int size, const char *name)
@@ -143,9 +148,13 @@ static void *input_loop(void *arg)
   int ret = osdg_main();
 
   if (ret)
-    printf("Main loop exited with an error\n");
+  {
+    printWSAError("Main loop exited with an error", WSAGetLastError());
+  }
   else
+  {
     printf("Main loop exited normally\n");
+  }
 
   return NULL;
 }
@@ -379,6 +388,14 @@ int main(int argc, const char *const *argv)
       return 255;
   }
 
+  /* TODO: Merge this into osdg_init() */
+  r = pthread_create(&inputThread, NULL, input_loop, NULL);
+  if (r)
+  {
+      printf("Failed to start main loop!\n");
+      return 255;
+  }
+
   r = read_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
   if (!r)
   {
@@ -411,11 +428,6 @@ int main(int argc, const char *const *argv)
   r = osdg_connect_to_grid(client, servers);
   if (r == 0)
   {
-    printf("Connection request sent, starting main loop\n");
-
-    r = pthread_create(&inputThread, NULL, input_loop, client);
-    if (!r)
-    {
       printf("Enter command; \"help\" to get help\n");
 
       for (;;)
@@ -463,11 +475,6 @@ int main(int argc, const char *const *argv)
           printf("Unknown command %s\n", cmd);
         }
       }
-    }
-    else
-    {
-      printf("Failed to start input thread!\n");
-    }
   }
   else
   {

@@ -1,8 +1,10 @@
 #include <sodium.h>
 
 #include "logging.h"
+#include "mainloop.h"
 #include "opensdg.h"
 #include "registry.h"
+#include "utils.h"
 
 int osdg_init(void)
 {
@@ -31,12 +33,13 @@ int osdg_init(void)
 #endif
 
     registry_init();
-
-    return 0;
+    return mainloop_init();
 }
 
 void osdg_shutdown(void)
 {
+//  FIXME: Stop the thread before doing this
+//    mainloop_shutdown();
     registry_shutdown();
 #ifdef _WIN32
     WSACleanup();
@@ -57,4 +60,32 @@ int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsigned char 
                     const char *ignore, size_t *bin_size, const char **end_ptr)
 {
     return sodium_hex2bin(bin, buffer_size, hex, hex_size, ignore, bin_size, end_ptr);
+}
+
+void queue_put(struct queue *q, struct queue_element *e)
+{
+    pthread_mutex_lock(&q->lock);
+
+    e->next = NULL;
+    q->tail->next = e;
+    q->tail = e;
+
+    pthread_mutex_unlock(&q->lock);
+}
+
+void *queue_get(struct queue *q)
+{
+    struct queue_element *e;
+
+    pthread_mutex_lock(&q->lock);
+
+    e = q->head;
+    if (e)
+        q->head = e->next;
+    if (q->tail == e)
+        q->tail = (struct queue_element *)&q->head;
+
+    pthread_mutex_unlock(&q->lock);
+
+    return e;
 }

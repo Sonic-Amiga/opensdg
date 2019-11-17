@@ -47,16 +47,17 @@ OSDG_API int osdg_set_receive_data_callback(osdg_connection_t client, osdg_recei
 
 enum osdg_error_kind
 {
-  osdg_no_error,           /* Everything is OK */
-  osdg_socket_error,       /* Socket I/O error */
-  osdg_encryption_error,   /* Sodium encryption error; should never happen */
-  osdg_decryption_error,   /* Sodium decryption error; likely corrupted data */
-  osdg_protocol_error,     /* Some invalid data has been received */
-  osdg_buffer_exceeded,    /* Buffer size is not enough for incoming data */
-  osdg_invalid_parameters, /* Invalid parameters supplied to function call */
-  osdg_connection_failed,  /* Unable to connect to any server */
-  osdg_memory_error,       /* Memory (e. g. buffers) allocation error */
-  osdg_connection_refused  /* Connection refused by peer */
+  osdg_no_error,            /* Everything is OK */
+  osdg_socket_error,        /* Socket I/O error */
+  osdg_encryption_error,    /* Sodium encryption error; should never happen */
+  osdg_decryption_error,    /* Sodium decryption error; likely corrupted data */
+  osdg_protocol_error,      /* Some invalid data has been received */
+  osdg_buffer_exceeded,     /* Buffer size is not enough for incoming data */
+  osdg_invalid_parameters,  /* Invalid parameters supplied to function call */
+  osdg_connection_failed,   /* Unable to connect to any server */
+  osdg_memory_error,        /* Memory (e. g. buffers) allocation error */
+  osdg_connection_refused,  /* Connection refused by peer */
+  osdg_too_many_connections /* Connection count exceeds main loop capability */
 };
 
 OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client);

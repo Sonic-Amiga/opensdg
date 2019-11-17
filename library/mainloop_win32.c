@@ -7,31 +7,48 @@
 #include "client.h"
 #include "mainloop.h"
 #include "socket.h"
+#include "utils.h"
 
 static struct _osdg_connection *connections[MAX_CONNECTIONS];
 static DWORD num_connections = 0;
-static WSAEVENT events[MAX_CONNECTIONS];
+static WSAEVENT events[MAX_CONNECTIONS + 1];
+
+static struct queue requests;
+
+int mainloop_init(void)
+{
+    WSAEVENT e = WSACreateEvent();
+
+    if (!e)
+        return -1;
+
+    queue_init(&requests);
+    events[0] = e;
+
+    return 0;
+}
+
+void mainloop_shutdown(void)
+{
+    WSACloseEvent(events[0]);
+    queue_destroy(&requests);
+}
+
+enum request_code
+{
+    REQUEST_ADD
+};
+
+static inline void send_client_request(struct client_req *req, enum request_code code)
+{
+    req->code = code;
+    queue_put(&requests, &req->qe);
+    WSASetEvent(events[0]);
+}
 
 int mainloop_add_connection(struct _osdg_connection *conn)
 {
-    WSAEVENT e;
-
-    if (num_connections == MAX_CONNECTIONS)
-        return -1;
-
-    e = WSACreateEvent();
-    if (e == NULL)
-    {
-        conn->errorKind = osdg_socket_error;
-        conn->errorCode = sockerrno();
-        return -1;
-    }
-
-    /* This should not fail if WSACreateEvent() worked */
-    WSAEventSelect(conn->sock, e, FD_READ|FD_CLOSE);
-
-    events[num_connections] = e;
-    connections[num_connections++] = conn;
+    send_client_request(&conn->req, REQUEST_ADD);
     return 0;
 }
 
@@ -49,30 +66,86 @@ void mainloop_remove_connection(struct _osdg_connection *conn)
         return;
 
     WSAEventSelect(conn->sock, events[i], 0);
-    WSACloseEvent(events[i]);
+    WSACloseEvent(events[i + 1]);
 
     if (i != --num_connections)
     {
         /* An object is being deleted from the middle of our array.
            Replace it with the object from the end, for the sake of performance */
         connections[i] = connections[num_connections];
-        events[i] = events[num_connections];
+        events[i + 1] = events[num_connections + 1];
+    }
+}
+
+static int handle_add_connection(struct _osdg_connection *conn)
+{
+    WSAEVENT e;
+
+    if (num_connections == MAX_CONNECTIONS)
+    {
+        conn->errorKind = osdg_too_many_connections;
+        return -1;
+    }
+
+    e = WSACreateEvent();
+    if (e == NULL)
+    {
+        conn->errorKind = osdg_socket_error;
+        conn->errorCode = sockerrno();
+        return -1;
+    }
+
+    /* This should not fail if WSACreateEvent() worked */
+    WSAEventSelect(conn->sock, e, FD_READ | FD_CLOSE);
+
+    connections[num_connections++] = conn;
+    events[num_connections] = e;
+
+    return 0;
+}
+
+static void handle_client_requests(void)
+{
+    struct client_req *req;
+
+    while (req = queue_get(&requests))
+    {
+        struct _osdg_connection *conn = (struct _osdg_connection *)req;
+        int res = 0;
+
+        switch (req->code)
+        {
+        case REQUEST_ADD:
+            res = handle_add_connection(conn);
+            break;
+        }
+
+        if (res)
+        {
+            connection_shutdown(conn);
+            connection_set_status(conn, osdg_error);
+        }
     }
 }
 
 int osdg_main(void)
 {
-    while (num_connections)
+    for (;;)
     {
-        DWORD r = WSAWaitForMultipleEvents(num_connections, events, FALSE, WSA_INFINITE, FALSE);
+        DWORD r = WSAWaitForMultipleEvents(num_connections + 1, events, FALSE, WSA_INFINITE, FALSE);
 
-        if (r >= WSA_WAIT_EVENT_0 && r < WSA_WAIT_EVENT_0 + num_connections)
+        if (r == WSA_WAIT_EVENT_0)
+        {
+            WSAResetEvent(events[0]);
+            handle_client_requests();
+        }
+        else if (r > WSA_WAIT_EVENT_0 && r <= WSA_WAIT_EVENT_0 + num_connections)
         {
             int idx = r - WSA_WAIT_EVENT_0;
 
             /* WSA events do not auto-reset */
             WSAResetEvent(events[idx]);
-            connection_read_data(connections[idx]);
+            connection_read_data(connections[idx - 1]);
         }
         else if (r == WSA_WAIT_FAILED)
         {
