@@ -8,7 +8,6 @@
 #endif
 
 #include "opensdg.h"
-#include "pthread_wrapper.h"
 #include "testapp.h"
 #include "devismart.h"
 #include "devismart_protocol.h"
@@ -139,24 +138,6 @@ void hexdump(const unsigned char *data, unsigned int size)
 
   for (i = 0; i < size; i++)
     printf("%02x", data[i]);
-}
-
-static pthread_t inputThread;
-
-static void *input_loop(void *arg)
-{
-  int ret = osdg_main();
-
-  if (ret)
-  {
-    printWSAError("Main loop exited with an error", WSAGetLastError());
-  }
-  else
-  {
-    printf("Main loop exited normally\n");
-  }
-
-  return NULL;
 }
 
 struct pairing_data
@@ -414,14 +395,6 @@ int main(int argc, const char *const *argv)
   if (r)
   {
       printf("Failed to initialize OSDG!\n");
-      return 255;
-  }
-
-  /* TODO: Merge this into osdg_init() */
-  r = pthread_create(&inputThread, NULL, input_loop, NULL);
-  if (r)
-  {
-      printf("Failed to start main loop!\n");
       return 255;
   }
 

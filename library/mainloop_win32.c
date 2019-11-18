@@ -12,22 +12,9 @@
 static struct _osdg_connection *connections[MAX_CONNECTIONS];
 static DWORD num_connections = 0;
 static WSAEVENT events[MAX_CONNECTIONS + 1];
-
-int mainloop_init(void)
-{
-    WSAEVENT e = WSACreateEvent();
-
-    if (!e)
-        return -1;
-
-    events[0] = e;
-    return 0;
-}
-
-void mainloop_shutdown(void)
-{
-    WSACloseEvent(events[0]);
-}
+static HANDLE thread;
+static DWORD tid;
+static int stopFlag;
 
 void mainloop_client_event(void)
 {
@@ -86,7 +73,7 @@ int mainloop_add_connection(struct _osdg_connection *conn)
     return 0;
 }
 
-int osdg_main(void)
+static DWORD WINAPI osdg_main(void *arg)
 {
     for (;;)
     {
@@ -96,6 +83,11 @@ int osdg_main(void)
         {
             WSAResetEvent(events[0]);
             mainloop_handle_client_requests();
+
+            /* Handling stopFlag after all pending client events should help
+               to complete outstanting client requests like close connections */
+            if (stopFlag)
+                break;
         }
         else if (r > WSA_WAIT_EVENT_0 && r <= WSA_WAIT_EVENT_0 + num_connections)
         {
@@ -112,4 +104,29 @@ int osdg_main(void)
     }
 
     return 0;
+}
+
+int mainloop_init(void)
+{
+    events[0] = WSACreateEvent();
+
+    if (!events[0])
+        return -1;
+
+    stopFlag = 0;
+    thread = CreateThread(NULL, 0, osdg_main, NULL, 0, &tid);
+    if (thread)
+        return 0;
+
+    WSACloseEvent(events[0]);
+    return -1;
+}
+
+void mainloop_shutdown(void)
+{
+    stopFlag = 1;
+    WSASetEvent(events[0]);
+    WaitForSingleObject(thread, INFINITE);
+    CloseHandle(thread);
+    WSACloseEvent(events[0]);
 }
