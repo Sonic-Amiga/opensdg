@@ -39,6 +39,9 @@ void mainloop_handle_client_requests(void)
             connection_shutdown(conn);
             connection_set_status(conn, osdg_closed);
             break;
+        case REQUEST_CALL_REMOTE:
+            res = peer_call_remote(conn);
+            break;
         }
 
         if (res)

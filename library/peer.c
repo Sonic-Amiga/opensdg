@@ -3,22 +3,21 @@
 #include "client.h"
 #include "protocol.h"
 #include "logging.h"
+#include "mainloop.h"
 #include "opensdg.h"
 #include "registry.h"
 #include "socket.h"
 
 int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol)
 {
-  char peerIdStr[sizeof(osdg_key_t) * 2 + 1];
-  ConnectToPeer request = CONNECT_TO_PEER__INIT;
   int ret = connection_allocate_buffers(peer);
+  size_t len;
 
   if (ret)
     return ret;
 
   peer->mode = mode_peer;
   memcpy(peer->serverPubkey, peerId, sizeof(osdg_key_t));
-  sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peerId, sizeof(osdg_key_t));
 
   /*
    * DEVISmart thermostat has a quirk: very first packet is prefixed with
@@ -37,15 +36,15 @@ int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_
   else
       peer->discardFirstBytes = 0;
 
-  registry_add_connection(peer);
+  len = strlen(protocol) + 1;
+  peer->protocol = malloc(len);
+  memcpy(peer->protocol, protocol, len);
 
-  LOG(PROTOCOL, "Peer[%u] connecting to %s:%s", peer->uid, peerIdStr, protocol);
+  peer->grid = grid;
+  peer->req.code = REQUEST_CALL_REMOTE;
 
-  request.id       = peer->uid;
-  request.peerid   = peerIdStr;
-  request.protocol = (char *)protocol;
-
-  return sendMESG(grid, MSG_CALL_REMOTE, &request);
+  mainloop_send_client_request(&peer->req);
+  return 0;
 }
 
 int peer_handle_remote_call_reply(PeerReply *reply)
@@ -93,4 +92,22 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     }
 
     return 0; /* We never abort grid connection */
+}
+
+int peer_call_remote(struct _osdg_connection *peer)
+{
+    ConnectToPeer request = CONNECT_TO_PEER__INIT;
+    char peerIdStr[crypto_box_PUBLICKEYBYTES * 2 + 1];
+
+    sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peer->serverPubkey, sizeof(peer->serverPubkey));
+
+    registry_add_connection(peer);
+
+    LOG(PROTOCOL, "Peer[%u] connecting to %s:%s", peer->uid, peerIdStr, peer->protocol);
+
+    request.id       = peer->uid;
+    request.peerid   = peerIdStr;
+    request.protocol = peer->protocol;
+
+    return sendMESG(peer->grid, MSG_CALL_REMOTE, &request);
 }

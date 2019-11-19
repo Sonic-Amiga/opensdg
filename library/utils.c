@@ -3,7 +3,6 @@
 #include "logging.h"
 #include "mainloop.h"
 #include "opensdg.h"
-#include "registry.h"
 #include "utils.h"
 
 #ifndef _WIN32
@@ -42,7 +41,6 @@ int osdg_init(void)
     }
 #endif
 
-    registry_init();
     mainloop_events_init();
 
     res = mainloop_init();
@@ -50,17 +48,14 @@ int osdg_init(void)
         return 0;
 
     mainloop_events_shutdown();
-    registry_shutdown();
     WSACleanup();
     return -1;
 }
 
 void osdg_shutdown(void)
 {
-//  FIXME: Stop the thread before doing this
-//    mainloop_shutdown();
-//    mainloop_events_shutdown();
-    registry_shutdown();
+    mainloop_shutdown();
+    mainloop_events_shutdown();
     WSACleanup();
 }
 

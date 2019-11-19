@@ -64,6 +64,7 @@ osdg_connection_t osdg_connection_create(void)
   client->receiveData   = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
+  client->protocol      = NULL;
   client->haveBuffers   = 0;
   /*
    * This buffer size is used by original mdglib from DEVISmart Android APK,
@@ -98,6 +99,12 @@ void connection_shutdown(struct _osdg_connection *client)
     {
         closesocket(client->sock);
         client->sock = -1;
+    }
+
+    if (client->protocol)
+    {
+        free(client->protocol);
+        client->protocol = NULL;
     }
 }
 

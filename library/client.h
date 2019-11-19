@@ -18,7 +18,8 @@ struct osdg_buffer
 enum request_code
 {
     REQUEST_ADD,
-    REQUEST_CLOSE
+    REQUEST_CLOSE,
+    REQUEST_CALL_REMOTE
 };
 
 struct client_req
@@ -53,6 +54,8 @@ struct _osdg_connection
   unsigned long long   nonce;
   unsigned char       *tunnelId;
   size_t               tunnelIdSize;
+  osdg_connection_t    grid;
+  char                *protocol;
   char                 haveBuffers;
   size_t               bufferSize;
   struct osdg_buffer  *bufferQueue;
@@ -81,6 +84,7 @@ static inline void connection_set_status(struct _osdg_connection *conn, enum osd
     conn->changeState(conn, state);
 }
 
+int peer_call_remote(struct _osdg_connection *peer);
 int peer_handle_remote_call_reply(PeerReply *reply);
 
 #endif
