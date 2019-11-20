@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -210,7 +211,7 @@ static int lookup_peer(osdg_connection_t conn)
     return -1;
 }
 
-static void print_status(osdg_connection_t conn, enum osdg_connection_t status)
+static void print_status(osdg_connection_t conn, enum osdg_connection_state status)
 {
     switch (status)
     {
@@ -230,7 +231,7 @@ static void print_status(osdg_connection_t conn, enum osdg_connection_t status)
     }
 }
 
-static void grid_status_changed(osdg_connection_t conn, enum osdg_connection_status status)
+static void grid_status_changed(osdg_connection_t conn, enum osdg_connection_state status)
 {
     printf("Grid");
     print_status(conn, status);
@@ -239,7 +240,7 @@ static void grid_status_changed(osdg_connection_t conn, enum osdg_connection_sta
         osdg_connection_destroy(conn);
 }
 
-static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_status status)
+static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_state status)
 {
     int idx = lookup_peer(conn);
 
@@ -354,9 +355,7 @@ static void close_connection(char *argStr)
     }
 
     osdg_connection_close(peers[idx]);
-    peers[idx] = NULL;
 }
-
 
 /* Danfoss cloud servers */
 static const struct osdg_endpoint servers[] =

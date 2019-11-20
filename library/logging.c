@@ -37,7 +37,7 @@ void _dump(unsigned int mask, const unsigned char *data, size_t length, const ch
     putchar('\n');
 }
 
-osdg_set_log_mask(unsigned int mask)
+void osdg_set_log_mask(unsigned int mask)
 {
     log_mask = mask;
 }

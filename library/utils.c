@@ -61,7 +61,7 @@ void osdg_shutdown(void)
 
 void osdg_create_private_key(osdg_key_t key)
 {
-    randombytes(key, sizeof(key));
+    randombytes(key, crypto_box_SECRETKEYBYTES);
 }
 
 void osdg_bin_to_hex(char *hex, size_t hex_size, const unsigned char *bin, size_t bin_size)

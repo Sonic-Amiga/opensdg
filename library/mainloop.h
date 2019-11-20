@@ -1,6 +1,8 @@
 #ifndef INTERNAL_MAINLOOP_H
 #define INTERNAL_MAINLOOP_H
 
+struct client_req;
+
 void mainloop_events_init(void);
 void mainloop_events_shutdown(void);
 void mainloop_send_client_request(struct client_req *req);

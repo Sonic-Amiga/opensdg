@@ -39,7 +39,7 @@ set(PROTOBUF_SOURCES protocol.pb-c.c protocol.pb-c.h)
 if (WIN32)
   set(SYSDEP_SOURCES mainloop_win32.c)
 else (WIN32)
-  set(SYSDEP_SOURCES mainloop_select.c)
+  set(SYSDEP_SOURCES mainloop_poll.c)
 endif (WIN32)
 
 add_custom_command(OUTPUT ${PROTOBUF_SOURCES}

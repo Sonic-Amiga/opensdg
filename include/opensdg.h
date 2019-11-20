@@ -74,7 +74,7 @@ OSDG_API void osdg_shutdown(void);
 #define OSDG_LOG_PROTOCOL   0x04 /* Protocol */
 #define OSDG_LOG_PACKETS    0x08 /* Raw packets */
 
-OSDG_API osdg_set_log_mask(unsigned int mask);
+OSDG_API void osdg_set_log_mask(unsigned int mask);
 
 OSDG_API void osdg_bin_to_hex(char *hex, size_t hex_size, const unsigned char *bin, size_t bin_size);
 OSDG_API int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsigned char *hex, size_t hex_size,

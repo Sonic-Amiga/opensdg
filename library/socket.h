@@ -11,6 +11,7 @@ int sockerrno(void);
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <errno.h>
 #include <unistd.h>
