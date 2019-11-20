@@ -57,6 +57,7 @@ osdg_connection_t osdg_connection_create(void)
     return NULL;
 
   client->uid           = -1;
+  client->sock          = -1;
   client->errorKind     = osdg_no_error;
   client->errorCode     = 0;
   client->mode          = mode_none;
