@@ -55,7 +55,7 @@ struct _osdg_connection
   unsigned char       *tunnelId;
   size_t               tunnelIdSize;
   osdg_connection_t    grid;
-  char                *protocol;
+  char                 protocol[SDG_MAX_PROTOCOL_BYTES];
   char                 haveBuffers;
   size_t               bufferSize;
   struct osdg_buffer  *bufferQueue;

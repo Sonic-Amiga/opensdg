@@ -11,7 +11,6 @@
 int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol)
 {
   int ret = connection_allocate_buffers(peer);
-  size_t len;
 
   if (ret)
     return ret;
@@ -36,9 +35,7 @@ int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_
   else
       peer->discardFirstBytes = 0;
 
-  len = strlen(protocol) + 1;
-  peer->protocol = malloc(len);
-  memcpy(peer->protocol, protocol, len);
+  strncpy(peer->protocol, protocol, sizeof(peer->protocol));
 
   peer->grid = grid;
   peer->req.code = REQUEST_CALL_REMOTE;

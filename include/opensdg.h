@@ -13,6 +13,10 @@
 #define OSDG_API
 #endif
 
+/* Some limits imposed by the protocol */
+#define SDG_MAX_PROTOCOL_BYTES 40
+#define SDG_MAX_OTP_BYTES      32
+
 typedef unsigned char osdg_key_t[32];
 
 OSDG_API void osdg_set_private_key(const osdg_key_t private_key);
