@@ -39,22 +39,43 @@ message ConnectToPeer
   required string protocol = 3;
 }
 
-// MSG_REMOTE_REPLY
+// MSG_REMOTE_REPLY, MSG_PAIR_REMOTE_REPLY
+message PeerInfo
+{
+  required string peerId = 3;
+  message ForwardHost
+  {
+    required string host = 1;
+    required uint32 port = 2;
+  }
+  required ForwardHost server   = 4;
+  required bytes       tunnelId = 5;
+}
 message PeerReply
 {
   required uint32 id     = 1;
-  required uint32 result = 2;
-  message PeerInfo
-  {
-    required string peerId = 3;
-    message ForwardHost
-    {
-      required string host = 1;
-      required uint32 port = 2;
-    }
-    required ForwardHost server   = 4;
-    required bytes       tunnelId = 5;
-  }
+  required uint32 result = 2; // 0 = OK, 1 = refuse
   optional PeerInfo peer = 3;
 }
 
+// MSG_INCOMING_CALL
+message IncomingCall
+{
+  required uint32   id       = 1;
+  required PeerInfo peer     = 2;
+  required string   protocol = 3;
+}
+
+// MSG_INCOMING_CALL_REPLY
+message IncomingCallReply
+{
+  required uint32 id     = 1;
+  required uint32 result = 2; // 1 = accept; 0 = refuse
+}
+
+// MSG_PAIR_REMOTE
+message PairRemote
+{
+  required uint32 id  = 1;
+  required string otp = 2;
+}

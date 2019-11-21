@@ -16,6 +16,7 @@
 /* Some limits imposed by the protocol */
 #define SDG_MAX_PROTOCOL_BYTES 40
 #define SDG_MAX_OTP_BYTES      32
+#define SDG_MIN_OTP_LENGTH      7
 
 typedef unsigned char osdg_key_t[32];
 
@@ -35,6 +36,7 @@ OSDG_API void osdg_connection_destroy(osdg_connection_t client);
 
 OSDG_API int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
 OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol);
+OSDG_API int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp);
 OSDG_API int osdg_connection_close(osdg_connection_t client);
 
 enum osdg_connection_state

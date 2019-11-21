@@ -211,11 +211,15 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
 }
 
 /* Grid message types */
-#define MSG_FORWARD_REMOTE   0
-#define MSG_PROTOCOL_VERSION 1
-#define MSG_FORWARD_REPLY    2
-#define MSG_CALL_REMOTE      10
-#define MSG_REMOTE_REPLY     11
+#define MSG_FORWARD_REMOTE      0
+#define MSG_PROTOCOL_VERSION    1
+#define MSG_FORWARD_REPLY       2
+#define MSG_CALL_REMOTE         10
+#define MSG_REMOTE_REPLY        11
+#define MSG_INCOMING_CALL       12
+#define MSG_INCOMING_CALL_REPLY 13
+#define MSG_PAIR_REMOTE         32
+#define MSG_PAIR_REMOTE_REPLY   33
 
 #define FORWARD_REMOTE_MAGIC     0xF09D8C95
 #define FORWARD_REMOTE_SIGNATURE "Mdg-NaCl/binary"

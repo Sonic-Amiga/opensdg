@@ -60,7 +60,28 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
 
         ret = peer_handle_remote_call_reply(reply);
         peer_reply__free_unpacked(reply, NULL);
-    } else
+    }
+    else if (msgType == MSG_INCOMING_CALL)
+    {
+        IncomingCall *call = incoming_call__unpack(NULL, length, data);
+        IncomingCallReply reply = INCOMING_CALL_REPLY__INIT;
+
+        if (!call)
+        {
+            DUMP(ERRORS, data, length, "MSG_INCOMING_CALL protobuf decoding error");
+            return 0; /* Do not abort grid connection */
+        }
+
+        LOG(PROTOCOL, "Incoming call from %s protocol %s", call->peer->peerid, call->protocol);
+
+        /* We are client only; reject */
+        reply.id = call->id;
+        reply.result = 0;
+
+        incoming_call__free_unpacked(call, NULL);
+        ret = sendMESG(conn, MSG_INCOMING_CALL_REPLY, &reply);
+    }
+    else
     {
         DUMP(PROTOCOL, data, length, "Unhandled grid message type %u", msgType);
         return 0;

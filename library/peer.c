@@ -44,6 +44,68 @@ int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_
   return 0;
 }
 
+static int pairing_handle_incoming_packet(struct _osdg_connection *conn,
+                                          const unsigned char *data, unsigned int length)
+{
+    unsigned char msgType;
+
+    /*
+     * Grid messages come in protobuf format, prefixed by one byte, indicating
+     * message type.
+     */
+    if (length == 0)
+    {
+        LOG(ERRORS, "Empty pairing packet received");
+        return 0; /* Ignore this */
+    }
+
+    msgType = *data++;
+    length--;
+
+    /* TODO: Figure out how to reply to message type 3.
+     * The body is binary, 0x60 bytes (3 * 32). Looks like some crypto magic. */
+    DUMP(PROTOCOL, data, length, "Pairing message type %u", msgType);
+    return 0;
+}
+
+int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp)
+{
+    size_t len = strlen(otp);
+    int ret;
+
+    if (len < SDG_MIN_OTP_LENGTH)
+    {
+        peer->errorKind = osdg_invalid_parameters;
+        return -1;
+    }
+
+    if (len >= SDG_MAX_OTP_BYTES)
+        len = SDG_MAX_OTP_BYTES - 1;
+
+    /* It is a protocol property to remove last 3 characters of the OTP. It's unknown, why... */
+    len -= 3;
+
+    /* Reuse protocol for OTP */
+    memcpy(peer->protocol, otp, len);
+    peer->protocol[len] = 0;
+
+    /* Don't return garbage from osdg_get_peer_id() */
+    memset(peer->serverPubkey, 0, sizeof(peer->serverPubkey));
+
+    ret = connection_allocate_buffers(peer);
+    if (ret)
+        return ret;
+
+    peer->discardFirstBytes = 0;
+    peer->receiveData = pairing_handle_incoming_packet;
+    peer->mode = mode_peer;
+    peer->grid = grid;
+    peer->req.code = REQUEST_PAIR_REMOTE;
+
+    mainloop_send_client_request(&peer->req);
+    return 0;
+}
+
 int peer_handle_remote_call_reply(PeerReply *reply)
 {
     struct _osdg_connection *peer;
@@ -107,4 +169,17 @@ int peer_call_remote(struct _osdg_connection *peer)
     request.protocol = peer->protocol;
 
     return sendMESG(peer->grid, MSG_CALL_REMOTE, &request);
+}
+
+int peer_pair_remote(struct _osdg_connection *peer)
+{
+    PairRemote request = PAIR_REMOTE__INIT;
+
+    registry_add_connection(peer);
+    LOG(PROTOCOL, "Peer[%u] remote pairing OTP %s", peer->uid, peer->protocol);
+
+    request.id = peer->uid;
+    request.otp = peer->protocol;
+
+    return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
 }

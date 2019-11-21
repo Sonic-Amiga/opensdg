@@ -19,7 +19,8 @@ enum request_code
 {
     REQUEST_ADD,
     REQUEST_CLOSE,
-    REQUEST_CALL_REMOTE
+    REQUEST_CALL_REMOTE,
+    REQUEST_PAIR_REMOTE
 };
 
 struct client_req
@@ -85,6 +86,7 @@ static inline void connection_set_status(struct _osdg_connection *conn, enum osd
 }
 
 int peer_call_remote(struct _osdg_connection *peer);
+int peer_pair_remote(struct _osdg_connection *peer);
 int peer_handle_remote_call_reply(PeerReply *reply);
 
 #endif

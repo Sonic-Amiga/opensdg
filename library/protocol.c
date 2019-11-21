@@ -11,17 +11,18 @@
 #include "protocol.h"
 #include "protocol.pb-c.h"
 
-static inline void dump_packet(const char *str, const struct packet_header *header)
+static inline void dump_packet(struct _osdg_connection *conn, const char *str,
+                               const struct packet_header *header)
 {
     const unsigned char *buffer = (unsigned char *)header;
 
     DUMP(PACKETS, buffer + sizeof(struct packet_header), PAYLOAD_SIZE(header),
-         "%s: %.4s", str, &header->command);
+         "Conn[%p] %s: %.4s", conn, str, &header->command);
 }
 
 int send_packet(struct packet_header *header, struct _osdg_connection *client)
 {
-    dump_packet("Sending", header);
+    dump_packet(client, "Sending", header);
     return send_data((const unsigned char *)header, PACKET_SIZE(header), client);
 }
 
@@ -146,7 +147,7 @@ int receive_packet(struct _osdg_connection *client)
         return -1;
     }
 
-    dump_packet("Received", header);
+    dump_packet(client, "Received", header);
 
     if (header->command == CMD_WELC)
     {
@@ -156,6 +157,8 @@ int receive_packet(struct _osdg_connection *client)
         unsigned char zeroMsg[sizeof(helo.ciphertext) + crypto_box_BOXZEROBYTES];
 
         memcpy(client->serverPubkey, welc->serverKey, sizeof(welc->serverKey));
+        DUMP(PROTOCOL, client->serverPubkey, sizeof(client->serverPubkey),
+             "Received server public key");
         crypto_box_keypair(client->clientTempPubkey, client->clientTempSecret);
         DUMP(PROTOCOL, client->clientTempPubkey, sizeof(client->clientTempPubkey),
              "Created short-term public key");

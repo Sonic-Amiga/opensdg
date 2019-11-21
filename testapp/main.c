@@ -211,6 +211,14 @@ static int lookup_peer(osdg_connection_t conn)
     return -1;
 }
 
+static void register_peer(unsigned int idx, osdg_connection_t peer)
+{
+    printf("Created connection #%u\n", idx);
+    peers[idx] = peer;
+    if (idx == num_peers)
+        num_peers++;
+}
+
 static void print_status(osdg_connection_t conn, enum osdg_connection_state status)
 {
     switch (status)
@@ -336,10 +344,40 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
     return;
   }
 
-  printf("Created connection #%u\n", idx);
-  peers[idx] = peer;
-  if (idx == num_peers)
-    num_peers++;
+  register_peer(idx, peer);
+}
+
+static void pair_remote_peer(osdg_connection_t client, char *argStr)
+{
+  const char *otp = getWord(&argStr);
+  unsigned int idx = get_peer_number();
+  osdg_connection_t peer;
+  int res;
+
+  if (idx == -1)
+  {
+      printf("Reached maximum number of connections\n");
+      return;
+  }
+
+  peer = osdg_connection_create();
+  if (!peer)
+  {
+      printf("Failed to create peer!\n");
+      return;
+  }
+
+  osdg_set_state_change_callback(peer, peer_status_changed);
+
+  res = osdg_pair_remote(client, peer, otp);
+  if (res)
+  {
+      printf("Failed to start connection!\n");
+      osdg_connection_destroy(peer);
+      return;
+  }
+
+  register_peer(idx, peer);
 }
 
 static void close_connection(char *argStr)
@@ -456,6 +494,10 @@ int main(int argc, const char *const *argv)
         else if (!strcmp(cmd, "connect"))
         {
           connect_to_peer(client, p);
+        }
+        else if (!strcmp(cmd, "pair"))
+        {
+            pair_remote_peer(client, p);
         }
         else if (!strcmp(cmd, "close"))
         {

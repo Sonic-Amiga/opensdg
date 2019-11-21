@@ -42,6 +42,9 @@ void mainloop_handle_client_requests(void)
         case REQUEST_CALL_REMOTE:
             res = peer_call_remote(conn);
             break;
+        case REQUEST_PAIR_REMOTE:
+            res = peer_pair_remote(conn);
+            break;
         }
 
         if (res)
