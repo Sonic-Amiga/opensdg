@@ -8,8 +8,9 @@
 #include "client.h"
 #include "logging.h"
 #include "socket.h"
-#include "protocol.h"
-#include "protocol.pb-c.h"
+#include "tunnel_protocol.h"
+#include "control_protocol.h"
+#include "control_protocol.pb-c.h"
 
 static inline void dump_packet(struct _osdg_connection *conn, const char *str,
                                const struct packet_header *header)

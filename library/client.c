@@ -4,7 +4,6 @@
 #include "client.h"
 #include "logging.h"
 #include "mainloop.h"
-#include "protocol.h"
 #include "socket.h"
 #include "registry.h"
 

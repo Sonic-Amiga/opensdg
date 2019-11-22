@@ -1,4 +1,5 @@
 #include "client.h"
+#include "control_protocol.h"
 #include "mainloop.h"
 #include "socket.h"
 

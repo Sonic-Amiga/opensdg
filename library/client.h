@@ -5,8 +5,8 @@
 #include "pthread_wrapper.h"
 
 #include "opensdg.h"
-#include "protocol.h"
-#include "protocol.pb-c.h"
+#include "tunnel_protocol.h"
+#include "control_protocol.pb-c.h"
 #include "uthash.h"
 #include "utils.h"
 

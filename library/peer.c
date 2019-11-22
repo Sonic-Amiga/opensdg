@@ -1,7 +1,7 @@
 #include <sodium.h>
 
 #include "client.h"
-#include "protocol.h"
+#include "control_protocol.h"
 #include "logging.h"
 #include "mainloop.h"
 #include "opensdg.h"
