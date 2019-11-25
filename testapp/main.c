@@ -108,6 +108,12 @@ static void print_client_error(osdg_connection_t client)
   case osdg_connection_refused:
     printf("Connection refused by peer\n");
     break;
+  case osdg_too_many_connections:
+    printf("Too many connections\n");
+    break;
+  case osdg_connection_closed:
+    printf("Connection closed by peer\n");
+    break;
   default:
     printf("Unknon error kind %d\n", kind);
     break;

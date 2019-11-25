@@ -134,6 +134,13 @@ int receive_data(struct _osdg_connection *client)
             client->errorCode = err;
             return ret;
         }
+        if (ret == 0)
+        {
+            LOG(ERRORS, "Connection[%p] closed by peer", client);
+            client->errorKind = osdg_connection_closed;
+            return -1;
+        }
+
         client->bytesReceived += ret;
         client->bytesLeft -= ret;
     }
