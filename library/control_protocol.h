@@ -1,6 +1,8 @@
 #ifndef INTERNAL_CONTROL_PROTOCOL_H
 #define INTERNAL_CONTROL_PROTOCOL_H
 
+#include <sodium.h>
+
 /* Grid message types */
 #define MSG_FORWARD_REMOTE      0
 #define MSG_PROTOCOL_VERSION    1
@@ -20,5 +22,30 @@
 #define PROTOCOL_VERSION_MAGIC   0xF09D8CA8
 #define PROTOCOL_VERSION_MAJOR   1
 #define PROTOCOL_VERSION_MINOR   0
+
+#pragma pack(1)
+
+struct PairingChallenge
+{
+    unsigned char msgCode;
+    unsigned char X[crypto_scalarmult_BYTES];
+    unsigned char nonce[32];
+    unsigned char Y[32];
+};
+
+struct PairingResponse
+{
+    unsigned char msgCode;
+    unsigned char X[crypto_scalarmult_BYTES];
+    unsigned char Y[32];
+};
+
+struct PairingResult
+{
+    unsigned char msgCode;
+    unsigned char result[32];
+};
+
+#pragma pack()
 
 #endif

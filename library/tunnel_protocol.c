@@ -365,46 +365,68 @@ int receive_packet(struct _osdg_connection *client)
 int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data)
 {
   size_t dataSize = protobuf_c_message_get_packed_size(data) + 1;
-  size_t packetSize = sizeof(struct packetMESG) + dataSize;
-  struct packetMESG *mesg;
+  struct packetMESG *mesg = get_MESG_packet(client, dataSize);
   struct mesg_payload *payload;
-  union curvecp_nonce nonce;
-  int res;
 
-  if (packetSize > client->bufferSize)
-  {
-    LOG(ERRORS, "Buffer size of %u exceeded; outgoing packet size is %u",
-        client->bufferSize, packetSize);
-    client->errorKind = osdg_buffer_exceeded;
+  if (!mesg)
     return -1;
-  }
 
-  /* We will build and encrypt the box in place, so need only one buffer */
-  mesg = client_get_buffer(client);
   payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
 
-  zero_pad(payload->outerPad);
-  payload->data.size = SWAP_16(dataSize);
   payload->data.data[0] = dataType;
   protobuf_c_message_pack(data, &payload->data.data[1]);
 
-  build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(client));
-  res = crypto_box_afternm((unsigned char *)payload, (unsigned char *)payload,
-                           sizeof(struct mesg_payload) + dataSize,
-                           nonce.data, client->beforenmData);
-  if (res)
-  {
-    client->errorKind = osdg_encryption_error;
-  }
-  else
-  {
-    build_header(&mesg->header, CMD_MESG, packetSize);
-    mesg->nonce = nonce.value[2];
-    res = send_packet(&mesg->header, client);
-  }
+  return send_MESG_packet(client, mesg);
+}
 
-  client_put_buffer(client, mesg);
-  return res;
+struct packetMESG *get_MESG_packet(struct _osdg_connection *client, size_t dataSize)
+{
+    size_t packetSize = sizeof(struct packetMESG) + dataSize;
+    struct packetMESG *mesg;
+    struct mesg_payload *payload;
+
+    if (packetSize > client->bufferSize)
+    {
+        LOG(ERRORS, "Buffer size of %u exceeded; outgoing packet size is %u",
+            client->bufferSize, packetSize);
+        client->errorKind = osdg_buffer_exceeded;
+        return NULL;
+    }
+
+    /* We will build and encrypt the box in place, so need only one buffer */
+    mesg = client_get_buffer(client);
+    payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
+    payload->data.size = SWAP_16(dataSize);
+
+    return mesg;
+}
+
+int send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg)
+{
+    struct mesg_payload *payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
+    size_t dataSize = SWAP_16(payload->data.size);
+    union curvecp_nonce nonce;
+    int res;
+
+    zero_pad(payload->outerPad);
+
+    build_short_term_nonce(&nonce, "CurveCP-client-M", client_get_nonce(conn));
+    res = crypto_box_afternm((unsigned char *)payload, (unsigned char *)payload,
+        sizeof(struct mesg_payload) + dataSize,
+        nonce.data, conn->beforenmData);
+    if (res)
+    {
+        conn->errorKind = osdg_encryption_error;
+    }
+    else
+    {
+        build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + dataSize);
+        mesg->nonce = nonce.value[2];
+        res = send_packet(&mesg->header, conn);
+    }
+
+    client_put_buffer(conn, mesg);
+    return res;
 }
 
 static int sendForward(struct _osdg_connection *conn)

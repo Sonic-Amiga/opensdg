@@ -44,11 +44,9 @@ int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_
   return 0;
 }
 
-static int pairing_handle_incoming_packet(struct _osdg_connection *conn,
+int pairing_handle_incoming_packet(struct _osdg_connection *conn,
                                           const unsigned char *data, unsigned int length)
 {
-    unsigned char msgType;
-
     /*
      * Grid messages come in protobuf format, prefixed by one byte, indicating
      * message type.
@@ -59,12 +57,78 @@ static int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         return 0; /* Ignore this */
     }
 
-    msgType = *data++;
-    length--;
+    if (data[0] == MSG_PAIRING_CHALLENGE)
+    {
+        struct PairingChallenge *challenge = (struct PairingChallenge *)data;
+        struct packetMESG *mesg = get_MESG_packet(conn, sizeof(struct PairingResponse));
+        struct mesg_payload *payload;
+        struct PairingResponse *response;
+        size_t l;
+        unsigned char buf[96];
+        unsigned char hash[crypto_hash_BYTES];
+        unsigned char xor[32];
+        unsigned char rnd[crypto_scalarmult_SCALARBYTES];
+        unsigned char base[crypto_scalarmult_BYTES];
+        unsigned char p1[crypto_scalarmult_BYTES];
+
+        if (!mesg)
+          return -1;
+
+        payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
+        response = (struct PairingResponse *)payload->data.data;
+        response->msgCode = MSG_PAIRING_RESPONSE;
+
+        LOG(PROTOCOL, "Connection[%p] received MSG_PAIRING_CHALLENGE:", conn);
+        DUMP(PROTOCOL, challenge->X, sizeof(challenge->X), "X    ");
+        DUMP(PROTOCOL, challenge->nonce, sizeof(challenge->nonce), "nonce");
+        DUMP(PROTOCOL, challenge->Y, sizeof(challenge->Y), "Y    ");
+
+        l = strlen(conn->protocol) + 1;
+        memcpy(buf, conn->protocol, l);
+        memcpy(&buf[l], clientPubkey, sizeof(clientPubkey));
+        memcpy(&buf[l + sizeof(clientPubkey)], conn->serverPubkey, sizeof(conn->serverPubkey));
+        crypto_hash(buf, buf, crypto_box_PUBLICKEYBYTES * 2 + l);
+
+        memcpy(&buf[crypto_hash_BYTES], challenge->nonce, sizeof(challenge->nonce));
+        crypto_hash(hash, buf, sizeof(buf));
+
+        crypto_stream_xor(xor, challenge->Y, sizeof(challenge->Y), challenge->nonce, hash);
+        randombytes(rnd, sizeof(rnd));
+        crypto_scalarmult_base(base, conn->beforenmData);
+        crypto_scalarmult(p1, xor, base);
+        crypto_scalarmult(response->X, rnd, p1);
+
+        crypto_hash(buf, challenge->X, 32);
+        crypto_scalarmult(&buf[crypto_hash_BYTES], rnd, challenge->X);
+        crypto_hash(hash, buf, sizeof(buf));
+        memcpy(response->Y, hash, sizeof(response->Y));
+
+        crypto_hash(buf, challenge->X, 32);
+        memcpy(&buf[crypto_hash_BYTES], response->X, sizeof(response->X));
+        crypto_hash(hash, buf, sizeof(buf));
+
+        memcpy(conn->pairingResult, hash, sizeof(conn->pairingResult));
+        DUMP(PROTOCOL, hash, sizeof(conn->pairingResult), "Expected result");
+
+        return send_MESG_packet(conn, mesg);
+    }
+    else if (data[0] == MSG_PAIRING_RESULT)
+    {
+        struct PairingResult *result = (struct PairingResult *)data;
+
+        if (memcmp(result->result, conn->pairingResult, sizeof(result->result)))
+        {
+            DUMP(ERRORS, result->result, sizeof(result->result), "Received incorrect reply");
+            return 0; /* Ignore for now, the remote hangs up anyways */
+        }
+
+        LOG(PROTOCOL, "Pairing successful");
+        return 0;
+    }
 
     /* TODO: Figure out how to reply to message type 3.
      * The body is binary, 0x60 bytes (3 * 32). Looks like some crypto magic. */
-    DUMP(PROTOCOL, data, length, "Pairing message type %u", msgType);
+    DUMP(PROTOCOL, data, length, "Unknown pairing message type %u", data[0]);
     return 0;
 }
 
@@ -73,21 +137,13 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
     size_t len = strlen(otp);
     int ret;
 
-    if (len < SDG_MIN_OTP_LENGTH)
+    if (len < SDG_MIN_OTP_LENGTH || len >= SDG_MAX_OTP_BYTES)
     {
         peer->errorKind = osdg_invalid_parameters;
         return -1;
     }
 
-    if (len >= SDG_MAX_OTP_BYTES)
-        len = SDG_MAX_OTP_BYTES - 1;
-
-    /* It is a protocol property to remove last 3 characters of the OTP. It's unknown, why... */
-    len -= 3;
-
-    /* Reuse protocol for OTP */
-    memcpy(peer->protocol, otp, len);
-    peer->protocol[len] = 0;
+    memcpy(peer->protocol, otp, len + 1);
 
     /* Don't return garbage from osdg_get_peer_id() */
     memset(peer->serverPubkey, 0, sizeof(peer->serverPubkey));
@@ -174,12 +230,19 @@ int peer_call_remote(struct _osdg_connection *peer)
 int peer_pair_remote(struct _osdg_connection *peer)
 {
     PairRemote request = PAIR_REMOTE__INIT;
+    char otpServerPart[SDG_MAX_OTP_BYTES];
+    size_t len = strlen(peer->protocol) - 3;
+
+    /* We never send the whole OTP to the server, i guess for security.
+     * We verify the complete thing during challenge-response verification */
+    memcpy(otpServerPart, peer->protocol, len);
+    otpServerPart[len] = 0;
 
     registry_add_connection(peer);
     LOG(PROTOCOL, "Peer[%u] remote pairing OTP %s", peer->uid, peer->protocol);
 
     request.id = peer->uid;
-    request.otp = peer->protocol;
+    request.otp = otpServerPart;
 
     return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
 }

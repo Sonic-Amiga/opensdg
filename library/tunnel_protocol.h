@@ -215,6 +215,8 @@ int send_packet(struct packet_header *header, struct _osdg_connection *client);
 int receive_packet(struct _osdg_connection *client);
 
 int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data);
+struct packetMESG *get_MESG_packet(struct _osdg_connection *client, size_t dataSize);
+int send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg);
 int start_connection(struct _osdg_connection *conn);
 
 #endif
