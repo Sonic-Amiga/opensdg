@@ -83,31 +83,32 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         DUMP(PROTOCOL, challenge->nonce, sizeof(challenge->nonce), "nonce");
         DUMP(PROTOCOL, challenge->Y, sizeof(challenge->Y), "Y    ");
 
-        l = strlen(conn->protocol) + 1;
+        l = strlen(conn->protocol);
         memcpy(buf, conn->protocol, l);
-        memcpy(&buf[l], clientPubkey, sizeof(clientPubkey));
-        memcpy(&buf[l + sizeof(clientPubkey)], conn->serverPubkey, sizeof(conn->serverPubkey));
-        crypto_hash(buf, buf, crypto_box_PUBLICKEYBYTES * 2 + l);
+        memcpy(&buf[l], clientPubkey, crypto_box_PUBLICKEYBYTES);
+        memcpy(&buf[l + crypto_box_PUBLICKEYBYTES], conn->serverPubkey, crypto_box_PUBLICKEYBYTES);
+        crypto_hash(buf, buf, l + crypto_box_PUBLICKEYBYTES * 2);
 
         memcpy(&buf[crypto_hash_BYTES], challenge->nonce, sizeof(challenge->nonce));
         crypto_hash(hash, buf, sizeof(buf));
 
         crypto_stream_xor(xor, challenge->Y, sizeof(challenge->Y), challenge->nonce, hash);
-        randombytes(rnd, sizeof(rnd));
         crypto_scalarmult_base(base, conn->beforenmData);
         crypto_scalarmult(p1, xor, base);
+        randombytes(rnd, sizeof(rnd));
         crypto_scalarmult(response->X, rnd, p1);
 
-        crypto_hash(buf, challenge->X, 32);
+        /* This is used in both hashing rounds below, avoid copying */
         crypto_scalarmult(&buf[crypto_hash_BYTES], rnd, challenge->X);
+
+        crypto_hash(buf, challenge->X, sizeof(challenge->X));
         crypto_hash(hash, buf, sizeof(buf));
         memcpy(response->Y, hash, sizeof(response->Y));
 
-        crypto_hash(buf, challenge->X, 32);
-        memcpy(&buf[crypto_hash_BYTES], response->X, sizeof(response->X));
+        crypto_hash(buf, response->X, sizeof(response->X));
         crypto_hash(hash, buf, sizeof(buf));
-
         memcpy(conn->pairingResult, hash, sizeof(conn->pairingResult));
+
         DUMP(PROTOCOL, hash, sizeof(conn->pairingResult), "Expected result");
 
         return send_MESG_packet(conn, mesg);
@@ -122,7 +123,7 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
             return 0; /* Ignore for now, the remote hangs up anyways */
         }
 
-        LOG(PROTOCOL, "Pairing successful");
+        LOG(PROTOCOL, "MSG_PAIRING_RESULT successful");
         return 0;
     }
 
