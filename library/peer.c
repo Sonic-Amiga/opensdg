@@ -254,3 +254,17 @@ int peer_pair_remote(struct _osdg_connection *peer)
 
     return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
 }
+
+int osdg_send_data(osdg_connection_t conn, const void *data, int size)
+{
+    struct packetMESG *mesg = get_MESG_packet(conn, size);
+    struct mesg_payload *payload;
+
+    if (!mesg)
+        return -1;
+
+    payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
+    memcpy(payload->data.data, data, size);
+
+    return send_MESG_packet(conn, mesg);
+}

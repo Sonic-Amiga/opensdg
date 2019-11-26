@@ -21,6 +21,7 @@
 typedef unsigned char osdg_key_t[32];
 
 OSDG_API void osdg_set_private_key(const osdg_key_t private_key);
+OSDG_API unsigned char *osdg_get_my_peer_id(void);
 OSDG_API void osdg_create_private_key(osdg_key_t key);
 
 typedef struct _osdg_connection *osdg_connection_t;
@@ -38,6 +39,7 @@ OSDG_API int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_en
 OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol);
 OSDG_API int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp);
 OSDG_API int osdg_connection_close(osdg_connection_t client);
+OSDG_API int osdg_send_data(osdg_connection_t conn, const void *data, int size);
 
 enum osdg_connection_state
 {

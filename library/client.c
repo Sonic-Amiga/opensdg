@@ -18,6 +18,11 @@ void osdg_set_private_key(const osdg_key_t private_key)
     crypto_scalarmult_base(clientPubkey, clientSecret);
 }
 
+unsigned char *osdg_get_my_peer_id(void)
+{
+  return clientPubkey;
+}
+
 static inline void client_put_buffer_nolock(struct _osdg_connection *client, struct osdg_buffer *buffer)
 {
   buffer->next = client->bufferQueue;

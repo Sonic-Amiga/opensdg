@@ -1,5 +1,5 @@
-set(TESTAPP_SOURCES devismart.c devismart.h devismart_protocol.h
-                    main.c testapp.h)
+set(TESTAPP_SOURCES devismart.c devismart.h devismart_config.c devismart_protocol.h
+                    jsmn.h main.c testapp.h)
 
 add_executable(opensdg_test ${TESTAPP_SOURCES} ${PUBLIC_INCLUDE_FILES})
 target_link_libraries(opensdg_test PUBLIC opensdg)

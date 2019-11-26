@@ -74,7 +74,7 @@ static int write_file(void *buffer, int size, const char *name)
     return -1;
 }
 
-static void print_client_error(osdg_connection_t client)
+void print_client_error(osdg_connection_t client)
 {
   enum osdg_error_kind kind = osdg_get_error_kind(client);
 
@@ -173,6 +173,29 @@ static void list_pairings(void)
   }
 }
 
+int add_pairing(osdg_key_t peerId, const char *description)
+{
+  unsigned int i;
+  
+  for (i = 0; i < pairings.count; i++)
+  {
+    if (!memcmp(pairings.data[i].peerId, peerId, sizeof(peerId)))
+      return 0;
+  }
+
+  if (pairings.count == MAX_PEERS - 1)
+  {
+    printf("Cannot add more peers!\n");
+    return -1;
+  }
+
+  i = pairings.count++;
+  memcpy(pairings.data[i].peerId, peerId, sizeof(peerId));
+  strcpy(pairings.data[i].description, description);
+
+  return 0;
+}
+
 static osdg_connection_t peers[MAX_PEERS];
 static unsigned int num_peers = 0;
 
@@ -225,7 +248,7 @@ static void register_peer(unsigned int idx, osdg_connection_t peer)
         num_peers++;
 }
 
-static void print_status(osdg_connection_t conn, enum osdg_connection_state status)
+void print_status(osdg_connection_t conn, enum osdg_connection_state status)
 {
     switch (status)
     {
@@ -279,7 +302,9 @@ static void pairing_status_changed(osdg_connection_t conn, enum osdg_connection_
         printf("Pairing successful with peerId ");
         hexdump(peerId, sizeof(osdg_key_t));
         putchar('\n');
-        break;
+        
+        if (!devismart_config_connect(conn))
+            return;
     case osdg_error:
         printf("Pairing failed: ");
         print_client_error(conn);
@@ -426,11 +451,17 @@ static const struct osdg_endpoint servers[] =
   {NULL, 0}
 };
 
+static osdg_connection_t client;
+
+osdg_connection_t get_grid_connection(void)
+{
+    return client;
+}
+
 int main(int argc, const char *const *argv)
 {
   unsigned int logmask = OSDG_LOG_ERRORS;
   osdg_key_t clientKey;
-  osdg_connection_t client;
   int i, r;
 
   /* This switches off DOS compatibility mode on Windows console */
