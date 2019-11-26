@@ -120,10 +120,17 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         if (memcmp(result->result, conn->pairingResult, sizeof(result->result)))
         {
             DUMP(ERRORS, result->result, sizeof(result->result), "Received incorrect reply");
-            return 0; /* Ignore for now, the remote hangs up anyways */
+            conn->errorCode = osdg_protocol_error;
+            return -1;
         }
 
         LOG(PROTOCOL, "MSG_PAIRING_RESULT successful");
+
+        /* There's nothing more to do here, so we close this connection. */
+        mainloop_remove_connection(conn);
+        connection_shutdown(conn);
+        connection_set_status(conn, osdg_pairing_complete);
+
         return 0;
     }
 
@@ -155,7 +162,7 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
 
     peer->discardFirstBytes = 0;
     peer->receiveData = pairing_handle_incoming_packet;
-    peer->mode = mode_peer;
+    peer->mode = mode_pairing;
     peer->grid = grid;
     peer->req.code = REQUEST_PAIR_REMOTE;
 

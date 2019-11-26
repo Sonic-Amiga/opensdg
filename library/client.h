@@ -33,7 +33,8 @@ enum connection_mode
 {
     mode_none,
     mode_grid,
-    mode_peer
+    mode_peer,
+    mode_pairing
 };
 
 struct _osdg_connection

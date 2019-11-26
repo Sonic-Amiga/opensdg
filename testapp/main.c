@@ -268,6 +268,30 @@ static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_sta
     }
 }
 
+static void pairing_status_changed(osdg_connection_t conn, enum osdg_connection_state status)
+{
+    const unsigned char *peerId;
+
+    switch (status)
+    {
+    case osdg_pairing_complete:
+        peerId = osdg_get_peer_id(conn);
+        printf("Pairing successful with peerId ");
+        hexdump(peerId, sizeof(osdg_key_t));
+        putchar('\n');
+        break;
+    case osdg_error:
+        printf("Pairing failed: ");
+        print_client_error(conn);
+        break;
+    default:
+        printf("Invalid pairing status %u\n", status); /* You should not see this */
+        break;
+    }
+
+    osdg_connection_destroy(conn);
+}
+
 static int default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
 {
     printf("Received data from the peer: ");
@@ -356,15 +380,8 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
 static void pair_remote_peer(osdg_connection_t client, char *argStr)
 {
   const char *otp = getWord(&argStr);
-  unsigned int idx = get_peer_number();
   osdg_connection_t peer;
   int res;
-
-  if (idx == -1)
-  {
-      printf("Reached maximum number of connections\n");
-      return;
-  }
 
   peer = osdg_connection_create();
   if (!peer)
@@ -373,7 +390,7 @@ static void pair_remote_peer(osdg_connection_t client, char *argStr)
       return;
   }
 
-  osdg_set_state_change_callback(peer, peer_status_changed);
+  osdg_set_state_change_callback(peer, pairing_status_changed);
 
   res = osdg_pair_remote(client, peer, otp);
   if (res)
@@ -382,8 +399,6 @@ static void pair_remote_peer(osdg_connection_t client, char *argStr)
       osdg_connection_destroy(peer);
       return;
   }
-
-  register_peer(idx, peer);
 }
 
 static void close_connection(char *argStr)

@@ -43,7 +43,8 @@ enum osdg_connection_state
 {
   osdg_closed,
   osdg_connected,
-  osdg_error
+  osdg_error,
+  osdg_pairing_complete
 };
 
 typedef void(*osdg_state_cb_t)(osdg_connection_t conn, enum osdg_connection_state state);

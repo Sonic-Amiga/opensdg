@@ -322,7 +322,8 @@ int receive_packet(struct _osdg_connection *client)
         if (client->mode != mode_grid)
         {
             /* If talking to a peer, we're done */
-            connection_set_status(client, osdg_connected);
+            if (client->mode == mode_peer)
+                connection_set_status(client, osdg_connected);
             return 0;
         }
 
