@@ -44,10 +44,13 @@ OSDG_API int osdg_send_data(osdg_connection_t conn, const void *data, int size);
 enum osdg_connection_state
 {
   osdg_closed,
+  osdg_connecting, /* State change callback is not called with this */
   osdg_connected,
   osdg_error,
   osdg_pairing_complete
 };
+
+OSDG_API enum osdg_connection_state osdg_get_connection_state(osdg_connection_t conn);
 
 typedef void(*osdg_state_cb_t)(osdg_connection_t conn, enum osdg_connection_state state);
 typedef int(*osdg_receive_cb_t)(osdg_connection_t conn, const unsigned char *data, unsigned int length);

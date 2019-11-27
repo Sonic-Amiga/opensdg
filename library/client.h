@@ -39,34 +39,35 @@ enum connection_mode
 
 struct _osdg_connection
 {
-  struct client_req    req;
-  UT_hash_handle       hh;
-  int                  uid;
-  SOCKET               sock;
-  unsigned int         errorKind;
-  unsigned int         errorCode;
-  enum connection_mode mode;
-  osdg_state_cb_t      changeState;
-  osdg_receive_cb_t    receiveData;
-  unsigned char        serverPubkey[crypto_box_PUBLICKEYBYTES];     /* Server's public key */
-  unsigned char        clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
-  unsigned char        clientTempSecret[crypto_box_SECRETKEYBYTES];
-  unsigned char        serverCookie[curvecp_COOKIEBYTES];
-  unsigned char        beforenmData[crypto_box_BEFORENMBYTES];
-  unsigned long long   nonce;
-  unsigned char       *tunnelId;
-  size_t               tunnelIdSize;
-  osdg_connection_t    grid;
-  char                 protocol[SDG_MAX_PROTOCOL_BYTES];
-  unsigned char        pairingResult[32];
-  char                 haveBuffers;
-  size_t               bufferSize;
-  struct osdg_buffer  *bufferQueue;
-  pthread_mutex_t      bufferMutex;
-  unsigned char       *receiveBuffer;
-  unsigned int         bytesReceived;
-  unsigned int         bytesLeft;
-  unsigned int         discardFirstBytes;
+  struct client_req          req;
+  UT_hash_handle             hh;
+  int                        uid;
+  SOCKET                     sock;
+  unsigned int               errorKind;
+  unsigned int               errorCode;
+  enum connection_mode       mode;
+  enum osdg_connection_state state;
+  osdg_state_cb_t            changeState;
+  osdg_receive_cb_t          receiveData;
+  unsigned char              serverPubkey[crypto_box_PUBLICKEYBYTES];     /* Server's public key */
+  unsigned char              clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
+  unsigned char              clientTempSecret[crypto_box_SECRETKEYBYTES];
+  unsigned char              serverCookie[curvecp_COOKIEBYTES];
+  unsigned char              beforenmData[crypto_box_BEFORENMBYTES];
+  unsigned long long         nonce;
+  unsigned char             *tunnelId;
+  size_t                     tunnelIdSize;
+  osdg_connection_t          grid;
+  char                       protocol[SDG_MAX_PROTOCOL_BYTES];
+  unsigned char              pairingResult[32];
+  char                       haveBuffers;
+  size_t                     bufferSize;
+  struct osdg_buffer        *bufferQueue;
+  pthread_mutex_t            bufferMutex;
+  unsigned char             *receiveBuffer;
+  unsigned int               bytesReceived;
+  unsigned int               bytesLeft;
+  unsigned int               discardFirstBytes;
 };
 
 /* Client's long term key pair, global */
@@ -81,8 +82,14 @@ void connection_read_data(struct _osdg_connection *conn);
 int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length);
 void connection_shutdown(struct _osdg_connection *conn);
 
+static inline int connection_in_use(struct _osdg_connection *conn)
+{
+    return conn->state == osdg_connecting || conn->state == osdg_connected;
+}
+
 static inline void connection_set_status(struct _osdg_connection *conn, enum osdg_connection_state state)
 {
+  conn->state = state;
   if (conn->changeState)
     conn->changeState(conn, state);
 }

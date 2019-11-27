@@ -10,12 +10,17 @@
 
 int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol)
 {
-  int ret = connection_allocate_buffers(peer);
+  int ret;
+  
+  if (connection_in_use(peer))
+    return -1;
 
+  ret = connection_allocate_buffers(peer);
   if (ret)
     return ret;
 
-  peer->mode = mode_peer;
+  peer->mode =  mode_peer;
+  peer->state = osdg_connecting;
   memcpy(peer->serverPubkey, peerId, sizeof(osdg_key_t));
 
   /*
@@ -145,6 +150,9 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
     size_t len = strlen(otp);
     int ret;
 
+    if (connection_in_use(peer))
+        return -1;
+
     if (len < SDG_MIN_OTP_LENGTH || len >= SDG_MAX_OTP_BYTES)
     {
         peer->errorKind = osdg_invalid_parameters;
@@ -161,10 +169,11 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
         return ret;
 
     peer->discardFirstBytes = 0;
-    peer->receiveData = pairing_handle_incoming_packet;
-    peer->mode = mode_pairing;
-    peer->grid = grid;
-    peer->req.code = REQUEST_PAIR_REMOTE;
+    peer->receiveData       = pairing_handle_incoming_packet;
+    peer->mode              = mode_pairing;
+    peer->state             = osdg_connecting;
+    peer->grid              = grid;
+    peer->req.code          = REQUEST_PAIR_REMOTE;
 
     mainloop_send_client_request(&peer->req);
     return 0;

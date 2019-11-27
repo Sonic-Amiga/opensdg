@@ -96,6 +96,9 @@ int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *s
     unsigned int nServers, left, i, res;
     const struct osdg_endpoint **list, **randomized;
 
+    if (connection_in_use(client))
+        return -1;
+
     for (nServers = 0; servers[nServers].host; nServers++);
     if (nServers == 0)
     {
@@ -108,6 +111,7 @@ int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *s
         return res;
 
     client->mode              = mode_grid;
+    client->state             = osdg_connecting;
     client->receiveData       = grid_handle_incoming_packet;
     client->discardFirstBytes = 0;
 
