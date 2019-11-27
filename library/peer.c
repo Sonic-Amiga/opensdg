@@ -5,7 +5,6 @@
 #include "logging.h"
 #include "mainloop.h"
 #include "opensdg.h"
-#include "registry.h"
 #include "socket.h"
 
 int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol)
@@ -132,9 +131,7 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         LOG(PROTOCOL, "MSG_PAIRING_RESULT successful");
 
         /* There's nothing more to do here, so we close this connection. */
-        mainloop_remove_connection(conn);
-        connection_shutdown(conn);
-        connection_set_status(conn, osdg_pairing_complete);
+        connection_terminate(conn, osdg_pairing_complete);
 
         return 0;
     }
@@ -179,25 +176,15 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
     return 0;
 }
 
-int peer_handle_remote_call_reply(PeerReply *reply)
+int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *reply)
 {
-    struct _osdg_connection *peer;
     int ret;
-
-    peer = registry_find_connection(reply->id);
-    if (!peer)
-    {
-        LOG(ERRORS, "Received MSG_PEER_REPLY for nonexistent peer %u\n", reply->id);
-        return 0; /* Ignore, this is not critical */
-    }
-
-    registry_remove_connection(peer);
 
     if (reply->result || (!reply->peer))
     {
         LOG(CONNECTION, "Peer[%u] connection refused; code %d", reply->id, reply->result);
         peer->errorKind = osdg_connection_refused;
-        connection_set_status(peer, osdg_error);
+        connection_terminate(peer, osdg_error);
         return 0;
     }
 
@@ -210,7 +197,7 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     if (!peer->tunnelId)
     {
         peer->errorKind = osdg_memory_error;
-        connection_set_status(peer, osdg_error);
+        connection_terminate(peer, osdg_error);
         return 0;
     }
 
@@ -220,10 +207,19 @@ int peer_handle_remote_call_reply(PeerReply *reply)
     if (ret == 0)
     {
         peer->errorKind = osdg_connection_failed;
-        connection_set_status(peer, osdg_error);
+        connection_terminate(peer, osdg_error);
     }
 
     return 0; /* We never abort grid connection */
+}
+
+void registry_add_connection(struct _osdg_connection *peer)
+{
+    struct _osdg_connection *grid = peer->grid;
+    struct list_element *req = list_tail(&grid->forwardList);
+
+    peer->uid = req ? get_connection(req)->uid + 1 : 0;
+    list_add(&peer->grid->forwardList, &peer->forwardReq);
 }
 
 int peer_call_remote(struct _osdg_connection *peer)

@@ -35,9 +35,7 @@ void mainloop_handle_client_requests(void)
             res = mainloop_add_connection(conn);
             break;
         case REQUEST_CLOSE:
-            mainloop_remove_connection(conn);
-            connection_shutdown(conn);
-            connection_set_status(conn, osdg_closed);
+            connection_terminate(conn, osdg_closed);
             break;
         case REQUEST_CALL_REMOTE:
             res = peer_call_remote(conn);
@@ -48,9 +46,6 @@ void mainloop_handle_client_requests(void)
         }
 
         if (res)
-        {
-            connection_shutdown(conn);
-            connection_set_status(conn, osdg_error);
-        }
+            connection_terminate(conn, osdg_error);
     }
 }

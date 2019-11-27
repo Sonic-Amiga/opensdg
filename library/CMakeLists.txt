@@ -32,9 +32,9 @@ message("libprotobuf-c found in ${PROTOBUF}")
 set(LIBRARY_SOURCES client.c client.h logging.c logging.h
                     tunnel_protocol.c tunnel_protocol.h
 					grid.c peer.c control_protocol.h
-					registry.c registry.h socket.c socket.h
+					socket.c socket.h
 					mainloop_events.c mainloop.h utils.c utils.h
-					uthash.h pthread_wrapper.h)
+					pthread_wrapper.h)
 set(PROTOBUF_SOURCES control_protocol.pb-c.c control_protocol.pb-c.h)
 
 if (WIN32)

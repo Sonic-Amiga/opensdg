@@ -5,7 +5,6 @@
 #include "logging.h"
 #include "mainloop.h"
 #include "socket.h"
-#include "registry.h"
 
 /* Our key pair */
 unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
@@ -84,8 +83,6 @@ osdg_connection_t osdg_connection_create(void)
 
 void connection_shutdown(struct _osdg_connection *client)
 {
-    registry_remove_connection(client);
-
     if (client->tunnelId)
     {
         free(client->tunnelId);
@@ -103,6 +100,34 @@ void connection_shutdown(struct _osdg_connection *client)
         closesocket(client->sock);
         client->sock = -1;
     }
+}
+
+void connection_terminate(struct _osdg_connection *conn, enum osdg_connection_state state)
+{
+    struct list_element *req, *next;
+
+    mainloop_remove_connection(conn);
+    connection_shutdown(conn);
+
+    /* Terminate also peers, waiting for forwarding reply */
+    for (req = conn->forwardList.head; req->next; req = next)
+    {
+        struct _osdg_connection *peer = get_connection(req);
+
+        /* User's callback can even destroy the connection, so remember next pointer early */
+        next = req->next;
+
+        if (state == osdg_error)
+        {
+            peer->errorKind = conn->errorKind;
+            peer->errorCode = conn->errorCode;
+        }
+
+        connection_terminate(peer, state);
+    }
+
+    list_init(&conn->forwardList);
+    connection_set_status(conn, state);
 }
 
 int osdg_connection_close(osdg_connection_t client)
@@ -194,9 +219,7 @@ void connection_read_data(struct _osdg_connection *conn)
     if (ret)
     {
         LOG(ERRORS, "Connection %p died", conn);
-        mainloop_remove_connection(conn);
-        connection_shutdown(conn);
-        connection_set_status(conn, osdg_error);
+        connection_terminate(conn, osdg_error);
     }
 }
 

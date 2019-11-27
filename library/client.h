@@ -7,7 +7,6 @@
 #include "opensdg.h"
 #include "tunnel_protocol.h"
 #include "control_protocol.pb-c.h"
-#include "uthash.h"
 #include "utils.h"
 
 struct osdg_buffer
@@ -40,7 +39,7 @@ enum connection_mode
 struct _osdg_connection
 {
   struct client_req          req;
-  UT_hash_handle             hh;
+  struct list_element        forwardReq;
   int                        uid;
   SOCKET                     sock;
   unsigned int               errorKind;
@@ -58,6 +57,7 @@ struct _osdg_connection
   unsigned char             *tunnelId;
   size_t                     tunnelIdSize;
   osdg_connection_t          grid;
+  struct list                forwardList;
   char                       protocol[SDG_MAX_PROTOCOL_BYTES];
   unsigned char              pairingResult[32];
   char                       haveBuffers;
@@ -84,6 +84,7 @@ static inline void client_put_buffer(struct _osdg_connection *client, void *ptr)
 void connection_read_data(struct _osdg_connection *conn);
 int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length);
 void connection_shutdown(struct _osdg_connection *conn);
+void connection_terminate(struct _osdg_connection *conn, enum osdg_connection_state state);
 
 static inline int connection_in_use(struct _osdg_connection *conn)
 {
@@ -99,6 +100,11 @@ static inline void connection_set_status(struct _osdg_connection *conn, enum osd
 
 int peer_call_remote(struct _osdg_connection *peer);
 int peer_pair_remote(struct _osdg_connection *peer);
-int peer_handle_remote_call_reply(PeerReply *reply);
+int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *reply);
+
+static inline struct _osdg_connection *get_connection(struct list_element *forwardReq)
+{
+    return (struct _osdg_connection *)((char *)forwardReq - offsetof(struct _osdg_connection, forwardReq));
+}
 
 #endif

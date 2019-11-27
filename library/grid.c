@@ -52,6 +52,7 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
     } else if (msgType = MSG_REMOTE_REPLY)
     {
         PeerReply *reply = peer_reply__unpack(NULL, length, data);
+        struct list_element *req;
 
         if (!reply)
         {
@@ -59,8 +60,22 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
             return 0; /* Do not abort grid connection */
         }
 
-        ret = peer_handle_remote_call_reply(reply);
+        for (req = conn->forwardList.head; req->next; req = req->next)
+        {
+            struct _osdg_connection *peer = get_connection(req);
+
+            if (peer->uid == reply->id)
+            {
+                list_remove(req);
+                ret = peer_handle_remote_call_reply(peer, reply);
+                peer_reply__free_unpacked(reply, NULL);
+                return ret;
+            }
+        }
+
+        LOG(ERRORS, "Received MSG_PEER_REPLY for nonexistent peer %u\n", reply->id);
         peer_reply__free_unpacked(reply, NULL);
+        return 0; /* Ignore, this is not critical */
     }
     else if (msgType == MSG_INCOMING_CALL)
     {
@@ -114,6 +129,7 @@ int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *s
     client->state             = osdg_connecting;
     client->receiveData       = grid_handle_incoming_packet;
     client->discardFirstBytes = 0;
+    list_init(&client->forwardList);
 
     /* Permute servers in random order in order to distribute the load */
     list = malloc(nServers * sizeof(void *));
