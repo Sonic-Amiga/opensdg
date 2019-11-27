@@ -12,7 +12,7 @@
 
 struct osdg_buffer
 {
-  struct osdg_buffer *next;
+    struct queue_element qe;
 };
 
 enum request_code
@@ -62,8 +62,7 @@ struct _osdg_connection
   unsigned char              pairingResult[32];
   char                       haveBuffers;
   size_t                     bufferSize;
-  struct osdg_buffer        *bufferQueue;
-  pthread_mutex_t            bufferMutex;
+  struct queue               bufferQueue;
   unsigned char             *receiveBuffer;
   unsigned int               bytesReceived;
   unsigned int               bytesLeft;
@@ -76,7 +75,11 @@ extern unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
 
 int connection_allocate_buffers(struct _osdg_connection *conn);
 void *client_get_buffer(struct _osdg_connection *conn);
-void client_put_buffer(struct _osdg_connection *conn, void *buffer);
+
+static inline void client_put_buffer(struct _osdg_connection *client, void *ptr)
+{
+    queue_put(&client->bufferQueue, ptr);
+}
 
 void connection_read_data(struct _osdg_connection *conn);
 int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length);

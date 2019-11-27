@@ -27,6 +27,13 @@ static inline void queue_destroy(struct queue *q)
     pthread_mutex_destroy(&q->lock);
 }
 
+static inline void queue_put_nolock(struct queue *q, struct queue_element *e)
+{
+    e->next = NULL;
+    q->tail->next = e;
+    q->tail = e;
+}
+
 void queue_put(struct queue *q, struct queue_element *e);
 void *queue_get(struct queue *q);
 

@@ -25,8 +25,7 @@ unsigned char *osdg_get_my_peer_id(void)
 
 static inline void client_put_buffer_nolock(struct _osdg_connection *client, struct osdg_buffer *buffer)
 {
-  buffer->next = client->bufferQueue;
-  client->bufferQueue = buffer;
+    queue_put_nolock(&client->bufferQueue, &buffer->qe);
 }
 
 int connection_allocate_buffers(struct _osdg_connection *conn)
@@ -76,10 +75,9 @@ osdg_connection_t osdg_connection_create(void)
    * so we're using it as a default.
    */
   client->bufferSize    = 1536;
-  client->bufferQueue   = NULL;
   client->receiveBuffer = NULL;
 
-  pthread_mutex_init(&client->bufferMutex, NULL);
+  queue_init(&client->bufferQueue);
 
   return client;
 }
@@ -124,15 +122,15 @@ int osdg_connection_close(osdg_connection_t client)
 
 void osdg_connection_destroy(osdg_connection_t client)
 {
-  struct osdg_buffer *buffer, *next;
+  struct queue_element *buffer, *next;
 
-  for (buffer = client->bufferQueue; buffer; buffer = next)
+  for (buffer = client->bufferQueue.head; buffer; buffer = next)
   {
     next = buffer->next;
     free(buffer);
   }
 
-  pthread_mutex_destroy(&client->bufferMutex);
+  queue_destroy(&client->bufferQueue);
   free(client);
 }
 
@@ -174,27 +172,12 @@ int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f
 
 void *client_get_buffer(struct _osdg_connection *client)
 {
-  struct osdg_buffer *buffer;
-
-  pthread_mutex_lock(&client->bufferMutex);
-
-  buffer = client->bufferQueue;
-  if (buffer)
-    client->bufferQueue = buffer->next;
-
-  pthread_mutex_unlock(&client->bufferMutex);
+  struct osdg_buffer *buffer = queue_get(&client->bufferQueue);
 
   if (!buffer)
     buffer = malloc(client->bufferSize);
 
   return buffer;
-}
-
-void client_put_buffer(struct _osdg_connection *client, void *ptr)
-{
-  pthread_mutex_lock(&client->bufferMutex);
-  client_put_buffer_nolock(client, ptr);
-  pthread_mutex_unlock(&client->bufferMutex);
 }
 
 void connection_read_data(struct _osdg_connection *conn)

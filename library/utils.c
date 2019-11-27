@@ -78,11 +78,7 @@ int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsigned char 
 void queue_put(struct queue *q, struct queue_element *e)
 {
     pthread_mutex_lock(&q->lock);
-
-    e->next = NULL;
-    q->tail->next = e;
-    q->tail = e;
-
+    queue_put_nolock(q, e);
     pthread_mutex_unlock(&q->lock);
 }
 
