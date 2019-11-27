@@ -8,7 +8,7 @@
 #include "registry.h"
 #include "socket.h"
 
-int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, osdg_key_t peerId, const char *protocol)
+int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol)
 {
   int ret;
   

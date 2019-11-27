@@ -66,8 +66,10 @@ struct ConfigDataHeader
   unsigned int length; /* Total length of the following data */
 };
 
-static int devismart_receive_config_data(osdg_connection_t conn, const unsigned char *data, int size)
+static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr, unsigned int size)
 {
+  const unsigned char *data = ptr;
+
   if (size > sizeof(struct ConfigDataHeader))
   {
     const struct ConfigDataHeader *header = (struct ConfigDataHeader *)data;
