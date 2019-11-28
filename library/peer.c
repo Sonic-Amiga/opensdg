@@ -162,9 +162,7 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         return 0;
     }
 
-    /* TODO: Figure out how to reply to message type 3.
-     * The body is binary, 0x60 bytes (3 * 32). Looks like some crypto magic. */
-    DUMP(PROTOCOL, data, length, "Unknown pairing message type %u", data[0]);
+    DUMP(ERRORS, data, length, "Unknown pairing message type %u", data[0]);
     return 0;
 }
 
