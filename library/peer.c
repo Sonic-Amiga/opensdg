@@ -188,11 +188,20 @@ static int peer_pair_remote(struct _osdg_connection *peer)
 
 osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp)
 {
-    size_t len = strlen(otp);
+    int len = 0;
     int ret;
 
     if (connection_in_use(peer))
         return osdg_connection_busy;
+
+    /* We're reusing peer->protocol for OTP storage.
+       Filter out all non-digits, counting length in the process */
+    while ((*otp) && (len < SDG_MAX_OTP_BYTES))
+    {
+        if (isdigit(*otp))
+            peer->protocol[len++] = *otp;
+        otp++;
+    }
 
     if (len < SDG_MIN_OTP_LENGTH || len >= SDG_MAX_OTP_BYTES)
     {
@@ -200,8 +209,8 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
         return osdg_invalid_parameters;
     }
 
-    memcpy(peer->protocol, otp, len + 1);
-
+    /* Terminate the OTP string */
+    peer->protocol[len] = 0;
     /* Don't return garbage from osdg_get_peer_id() */
     memset(peer->serverPubkey, 0, sizeof(peer->serverPubkey));
 
