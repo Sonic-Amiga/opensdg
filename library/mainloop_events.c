@@ -35,6 +35,7 @@ void mainloop_handle_client_requests(void)
             res = mainloop_add_connection(conn);
             break;
         case REQUEST_CLOSE:
+            conn->closing = 0;
             connection_terminate(conn, osdg_closed);
             break;
         case REQUEST_CALL_REMOTE:

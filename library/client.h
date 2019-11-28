@@ -60,6 +60,7 @@ struct _osdg_connection
   struct list                forwardList;
   char                       protocol[SDG_MAX_PROTOCOL_BYTES];
   unsigned char              pairingResult[32];
+  char                       closing;
   char                       haveBuffers;
   size_t                     bufferSize;
   struct queue               bufferQueue;

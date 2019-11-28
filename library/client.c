@@ -68,6 +68,7 @@ osdg_connection_t osdg_connection_create(void)
   client->receiveData   = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
+  client->closing       = 0;
   client->haveBuffers   = 0;
   /*
    * This buffer size is used by original mdglib from DEVISmart Android APK,
@@ -135,14 +136,17 @@ osdg_result_t osdg_connection_close(osdg_connection_t client)
 {
     /* In this state another request can be in progress;
        adding client->req to main loop's queue for the second time will screw it up
-       CHECKME: Will it be comfortable or not ? */
-    if (client->state == osdg_connecting)
+       CHECKME: Will it be convenient or not ?
+       We specify "closing" state as completely separate flag in order to avoid race
+       with main thread, which could have errored out at the very same moment and
+       would be setting "error" state */
+    if (client->state == osdg_connecting || client->closing)
       return osdg_connection_busy;
 
     client->req.code = REQUEST_CLOSE;
+    client->closing  = 1;
     mainloop_send_client_request(&client->req);
 
-    /* TODO: Check for dumb things like double close */
     return osdg_no_error;
 }
 
