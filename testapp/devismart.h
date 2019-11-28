@@ -2,4 +2,4 @@
 
 int devismart_config_connect(osdg_connection_t conn);
 
-int devismart_receive_data(osdg_connection_t conn, const void *data, unsigned int size);
+osdg_result_t devismart_receive_data(osdg_connection_t conn, const void *data, unsigned int size);

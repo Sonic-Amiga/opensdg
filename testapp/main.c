@@ -111,6 +111,12 @@ void print_result(osdg_result_t res)
     case osdg_connection_closed:
         printf("Connection closed by peer\n");
         break;
+    case osdg_wrong_state:
+        printf("Connection is in wrong state\n");
+        break;
+    case osdg_system_error:
+        printf("General OS error\n");
+        break;
     default:
         printf("Unknon result code %d\n", res);
         break;
@@ -330,11 +336,11 @@ static void pairing_status_changed(osdg_connection_t conn, enum osdg_connection_
     osdg_connection_destroy(conn);
 }
 
-static int default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
+static osdg_result_t default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
 {
     printf("Received data from the peer: ");
     dump_data(data, length);
-    return 0;
+    return osdg_no_error;
 }
 
 static void connect_to_peer(osdg_connection_t client, char *argStr)
@@ -396,7 +402,7 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
   else
     receiveFunc = default_peer_receive_data;
 
-  res = osdg_set_receive_data_callback(peer, devismart_receive_data);
+  res = osdg_set_receive_data_callback(peer, receiveFunc);
   if (res)
   {
       printf("Failed to set data receive callback!\n");
