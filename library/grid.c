@@ -129,7 +129,6 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_e
     client->state             = osdg_connecting;
     client->receiveData       = grid_handle_incoming_packet;
     client->discardFirstBytes = 0;
-    list_init(&client->forwardList);
 
     /* Permute servers in random order in order to distribute the load */
     list = malloc(nServers * sizeof(void *));

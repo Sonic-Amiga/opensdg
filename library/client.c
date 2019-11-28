@@ -76,6 +76,7 @@ osdg_connection_t osdg_connection_create(void)
   client->bufferSize    = 1536;
   client->receiveBuffer = NULL;
 
+  list_init(&client->forwardList);
   queue_init(&client->bufferQueue);
 
   return client;
