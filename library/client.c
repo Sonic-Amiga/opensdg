@@ -148,7 +148,7 @@ osdg_result_t osdg_connection_close(osdg_connection_t client)
        with main thread, which could have errored out at the very same moment and
        would be setting "error" state */
     if (client->state == osdg_connecting || client->closing)
-      return osdg_connection_busy;
+      return osdg_wrong_state;
 
     client->closing  = 1;
     mainloop_send_client_request(&client->req, connection_close);
@@ -200,7 +200,7 @@ int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f
 {
     /* Grid and pairing connections have internal data handler, don't screw them up */
     if (connection_in_use(client) && client->mode != mode_peer)
-        return osdg_connection_busy;
+        return osdg_wrong_state;
 
     client->receiveData = f;
     return osdg_no_error;

@@ -39,7 +39,7 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
   int ret;
   
   if (connection_in_use(peer))
-    return osdg_connection_busy;
+    return osdg_wrong_state;
 
   ret = connection_allocate_buffers(peer);
   if (ret)
@@ -192,7 +192,7 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
     int ret;
 
     if (connection_in_use(peer))
-        return osdg_connection_busy;
+        return osdg_wrong_state;
 
     /* We're reusing peer->protocol for OTP storage.
        Filter out all non-digits, counting length in the process */
@@ -267,9 +267,13 @@ int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *repl
 
 osdg_result_t osdg_send_data(osdg_connection_t conn, const void *data, int size)
 {
-    struct packetMESG *mesg = get_MESG_packet(conn, size);
+    struct packetMESG *mesg;
     struct mesg_payload *payload;
 
+    if (conn->state != osdg_connected || conn->mode != mode_peer)
+        return osdg_wrong_state;
+
+    mesg = get_MESG_packet(conn, size);
     if (!mesg)
         return osdg_buffer_exceeded;
 

@@ -35,7 +35,7 @@ typedef enum
     osdg_connection_refused,   /* Connection refused by peer */
     osdg_too_many_connections, /* Connection count exceeds main loop capability */
     osdg_connection_closed,    /* Connection closed by peer */
-    osdg_connection_busy,      /* Attempt to reuse connection which is already in use */
+    osdg_wrong_state,          /* A request is inappropriate for current connection state */
     osdg_system_error          /* General OS-specific error */
 } osdg_result_t;
 

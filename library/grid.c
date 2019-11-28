@@ -112,7 +112,7 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_e
     const struct osdg_endpoint **list, **randomized;
 
     if (connection_in_use(client))
-        return osdg_connection_busy;
+        return osdg_wrong_state;
 
     for (nServers = 0; servers[nServers].host; nServers++);
     if (nServers == 0)
