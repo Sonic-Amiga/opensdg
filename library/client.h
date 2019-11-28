@@ -7,25 +7,11 @@
 #include "opensdg.h"
 #include "tunnel_protocol.h"
 #include "control_protocol.pb-c.h"
-#include "utils.h"
+#include "mainloop.h"
 
 struct osdg_buffer
 {
     struct queue_element qe;
-};
-
-enum request_code
-{
-    REQUEST_ADD,
-    REQUEST_CLOSE,
-    REQUEST_CALL_REMOTE,
-    REQUEST_PAIR_REMOTE
-};
-
-struct client_req
-{
-    struct queue_element qe;
-    enum request_code    code;
 };
 
 enum connection_mode

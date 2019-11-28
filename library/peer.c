@@ -7,6 +7,33 @@
 #include "opensdg.h"
 #include "socket.h"
 
+static void registry_add_connection(struct _osdg_connection *peer)
+{
+    struct _osdg_connection *grid = peer->grid;
+    struct list_element *req = list_tail(&grid->forwardList);
+
+    peer->uid = req ? get_connection(req)->uid + 1 : 0;
+    list_add(&peer->grid->forwardList, &peer->forwardReq);
+}
+
+static int peer_call_remote(struct _osdg_connection *peer)
+{
+    ConnectToPeer request = CONNECT_TO_PEER__INIT;
+    char peerIdStr[crypto_box_PUBLICKEYBYTES * 2 + 1];
+
+    sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peer->serverPubkey, sizeof(peer->serverPubkey));
+
+    registry_add_connection(peer);
+
+    LOG(PROTOCOL, "Peer[%u] connecting to %s:%s", peer->uid, peerIdStr, peer->protocol);
+
+    request.id = peer->uid;
+    request.peerid = peerIdStr;
+    request.protocol = peer->protocol;
+
+    return sendMESG(peer->grid, MSG_CALL_REMOTE, &request);
+}
+
 osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol)
 {
   int ret;
@@ -42,9 +69,8 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
   strncpy(peer->protocol, protocol, sizeof(peer->protocol));
 
   peer->grid = grid;
-  peer->req.code = REQUEST_CALL_REMOTE;
 
-  mainloop_send_client_request(&peer->req);
+  mainloop_send_client_request(&peer->req, peer_call_remote);
   return osdg_no_error;
 }
 
@@ -142,6 +168,26 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
     return 0;
 }
 
+static int peer_pair_remote(struct _osdg_connection *peer)
+{
+    PairRemote request = PAIR_REMOTE__INIT;
+    char otpServerPart[SDG_MAX_OTP_BYTES];
+    size_t len = strlen(peer->protocol) - 3;
+
+    /* We never send the whole OTP to the server, i guess for security.
+     * We verify the complete thing during challenge-response verification */
+    memcpy(otpServerPart, peer->protocol, len);
+    otpServerPart[len] = 0;
+
+    registry_add_connection(peer);
+    LOG(PROTOCOL, "Peer[%u] remote pairing OTP %s", peer->uid, peer->protocol);
+
+    request.id = peer->uid;
+    request.otp = otpServerPart;
+
+    return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
+}
+
 osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp)
 {
     size_t len = strlen(otp);
@@ -170,9 +216,8 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
     peer->mode              = mode_pairing;
     peer->state             = osdg_connecting;
     peer->grid              = grid;
-    peer->req.code          = REQUEST_PAIR_REMOTE;
 
-    mainloop_send_client_request(&peer->req);
+    mainloop_send_client_request(&peer->req, peer_pair_remote);
     return osdg_no_error;
 }
 
@@ -211,53 +256,6 @@ int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *repl
     }
 
     return 0; /* We never abort grid connection */
-}
-
-void registry_add_connection(struct _osdg_connection *peer)
-{
-    struct _osdg_connection *grid = peer->grid;
-    struct list_element *req = list_tail(&grid->forwardList);
-
-    peer->uid = req ? get_connection(req)->uid + 1 : 0;
-    list_add(&peer->grid->forwardList, &peer->forwardReq);
-}
-
-int peer_call_remote(struct _osdg_connection *peer)
-{
-    ConnectToPeer request = CONNECT_TO_PEER__INIT;
-    char peerIdStr[crypto_box_PUBLICKEYBYTES * 2 + 1];
-
-    sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peer->serverPubkey, sizeof(peer->serverPubkey));
-
-    registry_add_connection(peer);
-
-    LOG(PROTOCOL, "Peer[%u] connecting to %s:%s", peer->uid, peerIdStr, peer->protocol);
-
-    request.id       = peer->uid;
-    request.peerid   = peerIdStr;
-    request.protocol = peer->protocol;
-
-    return sendMESG(peer->grid, MSG_CALL_REMOTE, &request);
-}
-
-int peer_pair_remote(struct _osdg_connection *peer)
-{
-    PairRemote request = PAIR_REMOTE__INIT;
-    char otpServerPart[SDG_MAX_OTP_BYTES];
-    size_t len = strlen(peer->protocol) - 3;
-
-    /* We never send the whole OTP to the server, i guess for security.
-     * We verify the complete thing during challenge-response verification */
-    memcpy(otpServerPart, peer->protocol, len);
-    otpServerPart[len] = 0;
-
-    registry_add_connection(peer);
-    LOG(PROTOCOL, "Peer[%u] remote pairing OTP %s", peer->uid, peer->protocol);
-
-    request.id = peer->uid;
-    request.otp = otpServerPart;
-
-    return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
 }
 
 osdg_result_t osdg_send_data(osdg_connection_t conn, const void *data, int size)

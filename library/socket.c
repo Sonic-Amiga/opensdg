@@ -95,8 +95,7 @@ int connect_to_host(struct _osdg_connection *client, const char *host, unsigned 
             res = start_connection(client);
             if (!res)
             {
-                client->req.code = REQUEST_ADD;
-                mainloop_send_client_request(&client->req);
+                mainloop_send_client_request(&client->req, mainloop_add_connection);
                 res = 1; /* Connected */
                 break;
             }

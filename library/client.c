@@ -132,6 +132,13 @@ void connection_terminate(struct _osdg_connection *conn, enum osdg_connection_st
     connection_set_status(conn, state);
 }
 
+static int connection_close(struct _osdg_connection *conn)
+{
+    conn->closing = 0;
+    connection_terminate(conn, osdg_closed);
+    return 0;
+}
+
 osdg_result_t osdg_connection_close(osdg_connection_t client)
 {
     /* In this state another request can be in progress;
@@ -143,9 +150,8 @@ osdg_result_t osdg_connection_close(osdg_connection_t client)
     if (client->state == osdg_connecting || client->closing)
       return osdg_connection_busy;
 
-    client->req.code = REQUEST_CLOSE;
     client->closing  = 1;
-    mainloop_send_client_request(&client->req);
+    mainloop_send_client_request(&client->req, connection_close);
 
     return osdg_no_error;
 }

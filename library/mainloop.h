@@ -1,11 +1,19 @@
 #ifndef INTERNAL_MAINLOOP_H
 #define INTERNAL_MAINLOOP_H
 
-struct client_req;
+#include "utils.h"
+
+typedef int(*client_req_cb_t)(struct _osdg_connection *);
+
+struct client_req
+{
+    struct queue_element qe;
+    client_req_cb_t      function;
+};
 
 void mainloop_events_init(void);
 void mainloop_events_shutdown(void);
-void mainloop_send_client_request(struct client_req *req);
+void mainloop_send_client_request(struct client_req *req, client_req_cb_t function);
 void mainloop_handle_client_requests(void);
 
 int mainloop_init(void);
