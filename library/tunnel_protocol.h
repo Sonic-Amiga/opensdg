@@ -211,14 +211,11 @@ static inline void build_random_long_term_nonce(union curvecp_nonce *nonce, cons
 }
 
 void build_header(struct packet_header *header, int cmd, size_t size);
-int send_packet(struct packet_header *header, struct _osdg_connection *client);
 int receive_packet(struct _osdg_connection *client);
 
 osdg_result_t sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data);
 struct packetMESG *get_MESG_packet(struct _osdg_connection *client, size_t dataSize);
-int start_connection(struct _osdg_connection *conn);
-
-osdg_result_t send_packet_any_thread(struct packet_header *header, struct _osdg_connection *client);
 osdg_result_t send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg);
+int start_connection(struct _osdg_connection *conn);
 
 #endif

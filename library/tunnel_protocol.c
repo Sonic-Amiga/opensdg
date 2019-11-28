@@ -21,13 +21,7 @@ static inline void dump_packet(struct _osdg_connection *conn, const char *str,
          "Conn[%p] %s: %.4s", conn, str, &header->command);
 }
 
-int send_packet(struct packet_header *header, struct _osdg_connection *conn)
-{
-    osdg_result_t result = send_packet_any_thread(header, conn);
-    return connection_set_result(conn, result);
-}
-
-osdg_result_t send_packet_any_thread(struct packet_header *header, struct _osdg_connection *conn)
+static osdg_result_t send_packet(struct packet_header *header, struct _osdg_connection *conn)
 {
     dump_packet(conn, "Sending", header);
     return send_data((const unsigned char *)header, PACKET_SIZE(header), conn);
@@ -36,12 +30,14 @@ osdg_result_t send_packet_any_thread(struct packet_header *header, struct _osdg_
 static int sendTELL(struct _osdg_connection *client)
 {
     struct packet_header tell;
+    osdg_result_t res;
 
     DUMP(PROTOCOL, clientPubkey, sizeof(clientPubkey), "Using public key");
     DUMP(PROTOCOL, clientSecret, sizeof(clientSecret), "Using private key");
 
     build_header(&tell, CMD_TELL, sizeof(tell));
-    return send_packet(&tell, client);
+    res = send_packet(&tell, client);
+    return connection_set_result(client, res);
 }
 
 static void *decryptMESG(struct packet_header *header, struct _osdg_connection *client, const char *nonce_prefix)
@@ -193,7 +189,7 @@ int receive_packet(struct _osdg_connection *client)
         memcpy(helo.clientPubkey, client->clientTempPubkey, sizeof(helo.clientPubkey));
         helo.nonce = nonce.value[2];
 
-        ret = send_packet(&helo.header, client);
+        result = send_packet(&helo.header, client);
     }
     else if (header->command == CMD_COOK)
     {
@@ -304,7 +300,7 @@ int receive_packet(struct _osdg_connection *client)
         memcpy(voch->cookie, client->serverCookie, sizeof(voch->cookie));
         voch->nonce = nonce.value[2];
 
-        ret = send_packet(&voch->header, client);
+        result = send_packet(&voch->header, client);
         client_put_buffer(client, voch);
     }
     else if (header->command == CMD_REDY)
@@ -347,7 +343,6 @@ int receive_packet(struct _osdg_connection *client)
         /* TODO: Implement client properties */
 
         result = sendMESG(client, MSG_PROTOCOL_VERSION, &protocolVer);
-        ret = connection_set_result(client, result);
     }
     else if (header->command == CMD_MESG)
     {
@@ -359,15 +354,14 @@ int receive_packet(struct _osdg_connection *client)
 
         length = SWAP_16(payload->data.size);
         result = connection_handle_data(client, payload->data.data, length);
-        ret = connection_set_result(client, result);
     }
     else
     {
         LOG(ERRORS, "Unknown packet received; ignoring");
-        ret = 0;
+        return 0;
     }
 
-    return ret;
+    return connection_set_result(client, result);
 }
 
 osdg_result_t sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data)
@@ -431,7 +425,7 @@ osdg_result_t send_MESG_packet(struct _osdg_connection *conn, struct packetMESG 
     {
         build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + dataSize);
         mesg->nonce = nonce.value[2];
-        result = send_packet_any_thread(&mesg->header, conn);
+        result = send_packet(&mesg->header, conn);
     }
 
     client_put_buffer(conn, mesg);
