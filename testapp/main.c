@@ -76,12 +76,12 @@ static int write_file(void *buffer, int size, const char *name)
 
 void print_client_error(osdg_connection_t client)
 {
-  enum osdg_error_kind kind = osdg_get_error_kind(client);
+  osdg_result_t kind = osdg_get_last_result(client);
 
   switch (kind)
   {
   case osdg_socket_error:
-    printWSAError("Socket I/O error", osdg_get_error_code(client));
+    printWSAError("Socket I/O error", osdg_get_last_errno(client));
     break;
   case osdg_encryption_error:
     printf("Libsodium encryption error\n");
@@ -101,7 +101,7 @@ void print_client_error(osdg_connection_t client)
   case osdg_connection_failed:
     printf("Failed to connect to host\n");
     /* Probably not legitimate, but good for internal diagnostics */
-    printWSAError("Last socket error", osdg_get_error_code(client));
+    printWSAError("Last socket error", osdg_get_last_errno(client));
   case osdg_memory_error:
     printf("Memory allocation error\n");
     break;

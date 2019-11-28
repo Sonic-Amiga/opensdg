@@ -159,12 +159,12 @@ void osdg_connection_destroy(osdg_connection_t client)
   free(client);
 }
 
-enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client)
+osdg_result_t osdg_get_last_result(osdg_connection_t client)
 {
   return client->errorKind;
 }
 
-int osdg_get_error_code(osdg_connection_t client)
+int osdg_get_last_errno(osdg_connection_t client)
 {
   return client->errorCode;
 }

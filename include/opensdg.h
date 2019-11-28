@@ -58,7 +58,7 @@ typedef int(*osdg_receive_cb_t)(osdg_connection_t conn, const void *data, unsign
 OSDG_API int osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f);
 OSDG_API int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f);
 
-enum osdg_error_kind
+typedef enum
 {
   osdg_no_error,             /* Everything is OK */
   osdg_socket_error,         /* Socket I/O error */
@@ -72,10 +72,10 @@ enum osdg_error_kind
   osdg_connection_refused,   /* Connection refused by peer */
   osdg_too_many_connections, /* Connection count exceeds main loop capability */
   osdg_connection_closed     /* Connection closed by peer */
-};
+} osdg_result_t;
 
-OSDG_API enum osdg_error_kind osdg_get_error_kind(osdg_connection_t client);
-OSDG_API int osdg_get_error_code(osdg_connection_t client);
+OSDG_API osdg_result_t osdg_get_last_result(osdg_connection_t client);
+OSDG_API int osdg_get_last_errno(osdg_connection_t client);
 OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
 OSDG_API int osdg_init(void);

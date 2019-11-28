@@ -42,7 +42,7 @@ struct _osdg_connection
   struct list_element        forwardReq;
   int                        uid;
   SOCKET                     sock;
-  unsigned int               errorKind;
+  osdg_result_t              errorKind;
   unsigned int               errorCode;
   enum connection_mode       mode;
   enum osdg_connection_state state;
