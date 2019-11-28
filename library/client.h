@@ -34,6 +34,7 @@ struct _osdg_connection
   enum osdg_connection_state state;
   osdg_state_cb_t            changeState;
   osdg_receive_cb_t          receiveData;
+  void                      *userData;
   unsigned char              serverPubkey[crypto_box_PUBLICKEYBYTES];     /* Server's public key */
   unsigned char              clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
   unsigned char              clientTempSecret[crypto_box_SECRETKEYBYTES];

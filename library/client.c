@@ -66,6 +66,7 @@ osdg_connection_t osdg_connection_create(void)
   client->state         = osdg_closed;
   client->changeState   = NULL;
   client->receiveData   = NULL;
+  client->userData      = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
   client->closing       = 0;
@@ -204,6 +205,16 @@ int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f
 
     client->receiveData = f;
     return osdg_no_error;
+}
+
+void osdg_set_user_data(osdg_connection_t conn, void *data)
+{
+    conn->userData = data;
+}
+
+void *osdg_get_user_data(osdg_connection_t conn)
+{
+    return conn->userData;
 }
 
 int connection_set_result(struct _osdg_connection *conn, osdg_result_t result)

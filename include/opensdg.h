@@ -54,6 +54,9 @@ struct osdg_endpoint
 OSDG_API osdg_connection_t osdg_connection_create(void);
 OSDG_API void osdg_connection_destroy(osdg_connection_t client);
 
+OSDG_API void osdg_set_user_data(osdg_connection_t conn, void *data);
+OSDG_API void *osdg_get_user_data(osdg_connection_t conn);
+
 OSDG_API osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
 OSDG_API osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol);
 OSDG_API osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp);

@@ -52,9 +52,11 @@ static int devismart_request_configuration(osdg_connection_t connection)
    * In this case a header is sent in the first packet, describing total
    * length of the configuration data. See struct ConfigDataHeader.
    * As of DEVISmart v1.2 this parameter is optional and can be completely
-   * omitted; default value is false.
+   * omitted; default value is false. However we set it to true because
+   * otherwise long configurations cannot be sent due to buffer size limit
+   * in the mdglib.
    */
-  len = sprintf(json, "{\"phoneName\":\"%s\",\"phonePublicKey\":\"%s\",\"chunkedMessage\":false}", user_name, hexed);
+  len = sprintf(json, "{\"phoneName\":\"%s\",\"phonePublicKey\":\"%s\",\"chunkedMessage\":true}", user_name, hexed);
   
   printf("Sending request: %s\n", json);
   return osdg_send_data(connection, json, len);
@@ -66,9 +68,84 @@ struct ConfigDataHeader
   unsigned int length; /* Total length of the following data */
 };
 
+static int parse_config_data(const char *json, int size)
+{
+    /*
+     * Received data is a JSON and it looks like this (i've removed my peer ID):
+     * {"houseName":"My Flat","houseEditUsers":true,"rooms":[{"roomName":"Living room","peerId":"<undisclosed>","zone":"Living","sortOrder":0}]}
+     */
+    jsmn_parser p;
+    jsmntok_t t[1024];
+    int r, i, j, k;
+
+    jsmn_init(&p);
+    r = jsmn_parse(&p, json, size, t, sizeof(t) / sizeof(t[0]));
+
+    if (r < 0) {
+        printf("Failed to parse configuration JSON: %d\n", r);
+        return -1;
+    }
+
+    for (i = 1; i < r; i++)
+    {
+        if ((jsoneq(json, &t[i], "rooms") == 0) && (t[i + 1].type == JSMN_ARRAY))
+        {
+            for (j = 0; j < t[i + 1].size; j++) {
+                jsmntok_t *g = &t[i + j + 2];
+                char *roomName = NULL;
+                char *roomPeer = NULL;
+
+                if (g[0].type != JSMN_OBJECT)
+                {
+                    printf("JSON error: \"rooms\" value is not an object!\n");
+                    return 1;
+                }
+
+                for (k = 1; k < g[0].size; k += 2)
+                {
+                    if (jsoneq(json, &g[k], "roomName") == 0) {
+                        roomName = jsonstrdup(json, &g[k + 1]);
+                    } else if (jsoneq(json, &g[k], "peerId") == 0) {
+                        roomPeer = jsonstrdup(json, &g[k + 1]);
+                    }
+                }
+
+                if (roomName && roomPeer)
+                {
+                    osdg_key_t device_id;
+
+                    printf("Adding room %s %s\n", roomPeer, roomName);
+
+                    if (!osdg_hex_to_bin(device_id, sizeof(device_id), roomPeer, sizeof(osdg_key_t) * 2, NULL, NULL, NULL)) {
+                        add_pairing(device_id, roomName);
+                    } else {
+                        printf("Malformed room %s peer ID: %s\n", roomName, roomPeer);
+                    }
+                }
+
+                free(roomName);
+                free(roomPeer);
+            }
+
+            i += t[i + 1].size + 1;
+        }
+    }
+
+    return 0;
+}
+
+struct ChunkedData
+{
+    unsigned int length;
+    unsigned int received;
+    char json[0];
+};
+
 static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr, unsigned int size)
 {
-  const unsigned char *data = ptr;
+  struct ChunkedData *cd = osdg_get_user_data(conn);
+  const char *data = ptr;
+  int res;
 
   if (size > sizeof(struct ConfigDataHeader))
   {
@@ -76,7 +153,14 @@ static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr
   
     if (header->start == 0)
     {
+      cd = malloc(sizeof(struct ChunkedData) + header->length);
+
       printf("Full size of chunked data: %d\n", header->length);
+      cd->length = header->length;
+      cd->received = 0;
+
+      osdg_set_user_data(conn, cd);
+
       data += sizeof(struct ConfigDataHeader);
       size -= sizeof(struct ConfigDataHeader);
     }
@@ -84,69 +168,33 @@ static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr
 
   printf("Received configuration data:\n%.*s\n", size, data);  
 
-  /*
-   * Received data is a JSON and it looks like this (i've removed my peer ID):
-   * {"houseName":"My Flat","houseEditUsers":true,"rooms":[{"roomName":"Living room","peerId":"<undisclosed>","zone":"Living","sortOrder":0}]}
-   */
-  jsmn_parser p;
-  jsmntok_t t[1024];
-  int r, i, j, k;
-  const char *json = (const char *)data;
-
-  jsmn_init(&p);
-  r = jsmn_parse(&p, json, size, t, sizeof(t) / sizeof(t[0]));
-
-  if (r < 0) {
-    printf("Failed to parse configuration JSON: %d\n", r);
-    return -1;
-  }
-
-  for (i = 1; i < r; i++)
+  if (cd)
   {
-    if ((jsoneq(json, &t[i], "rooms") == 0) && (t[i + 1].type == JSMN_ARRAY))
-    {
-      for (j = 0; j < t[i + 1].size; j++) {
-        jsmntok_t *g = &t[i + j + 2];
-	char *roomName = NULL;
-	char *roomPeer = NULL;
-		
-	if (g[0].type != JSMN_OBJECT)
-	{
-          printf("JSON error: \"rooms\" value is not an object!\n");
-	  return 1;
-	}
-		
-	for (k = 1; k < g[0].size; k+= 2)
-	{
-	  if (jsoneq(json, &g[k], "roomName") == 0) {
-	    roomName = jsonstrdup(json, &g[k + 1]);
-	  } else if (jsoneq(json, &g[k], "peerId") == 0) {
-	    roomPeer = jsonstrdup(json, &g[k + 1]);
-	  }
-	}
-	
-	if (roomName && roomPeer)
-	{
-	  osdg_key_t device_id;
-
-	  printf("Adding room %s %s\n", roomPeer, roomName);
-
-          if (!osdg_hex_to_bin(device_id, sizeof(device_id), roomPeer, sizeof(osdg_key_t) * 2, NULL, NULL, NULL)) {
-            add_pairing(device_id, roomName);            
-          } else {
-	    printf("Malformed room %s peer ID: %s\n", roomName, roomPeer);
-	  }
-	}
-		
-	free(roomName);
-	free(roomPeer);
+      if (cd->received + size > cd->length)
+      {
+          printf("Length overrun (%d vs %d)!\n", cd->received + size, cd->length);
+          return -1;
       }
 
-      i += t[i + 1].size + 1;
-    }
+      memcpy(&cd->json[cd->received], data, size);
+      cd->received += size;
+
+      if (cd->received < cd->length)
+          return 0; // Need more data
+
+      res = parse_config_data(cd->json, cd->length);
+      osdg_set_user_data(conn, NULL);
+      free(cd);
+  }
+  else
+  {
+      res = parse_config_data(data, size);
   }
 
-  return 0;
+  if (!res)
+      osdg_connection_close(conn);
+
+  return res;
 }
 
 static void devismart_config_status_changed(osdg_connection_t conn, enum osdg_connection_state status)
