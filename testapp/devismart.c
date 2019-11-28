@@ -372,7 +372,7 @@ int devismart_receive_data(osdg_connection_t conn, const void *ptr, unsigned int
 	{
 	  printf("Malformed stream at position %d; size exceeds maximum:\n", (int)(data - start));
           dump_data(start, origSize);
-	  return 0;
+	  return osdg_no_error; /* Do not break the connection */
 	}
 
 	size -= handled;
@@ -385,5 +385,5 @@ int devismart_receive_data(osdg_connection_t conn, const void *ptr, unsigned int
         dump_data(data, size);
     }
  
-    return 0;
+    return osdg_no_error;
 }

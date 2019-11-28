@@ -75,7 +75,7 @@ enum osdg_connection_state
 OSDG_API enum osdg_connection_state osdg_get_connection_state(osdg_connection_t conn);
 
 typedef void(*osdg_state_cb_t)(osdg_connection_t conn, enum osdg_connection_state state);
-typedef int(*osdg_receive_cb_t)(osdg_connection_t conn, const void *data, unsigned int length);
+typedef osdg_result_t (*osdg_receive_cb_t)(osdg_connection_t conn, const void *data, unsigned int length);
 
 OSDG_API osdg_result_t osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f);
 OSDG_API osdg_result_t osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f);

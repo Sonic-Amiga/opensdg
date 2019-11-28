@@ -141,7 +141,7 @@ struct ChunkedData
     char json[0];
 };
 
-static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr, unsigned int size)
+static osdg_result_t devismart_receive_config_data(osdg_connection_t conn, const void *ptr, unsigned int size)
 {
   struct ChunkedData *cd = osdg_get_user_data(conn);
   const char *data = ptr;
@@ -173,14 +173,14 @@ static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr
       if (cd->received + size > cd->length)
       {
           printf("Length overrun (%d vs %d)!\n", cd->received + size, cd->length);
-          return -1;
+          return osdg_protocol_error;
       }
 
       memcpy(&cd->json[cd->received], data, size);
       cd->received += size;
 
       if (cd->received < cd->length)
-          return 0; // Need more data
+          return osdg_no_error; // Need more data
 
       res = parse_config_data(cd->json, cd->length);
       osdg_set_user_data(conn, NULL);
@@ -192,9 +192,12 @@ static int devismart_receive_config_data(osdg_connection_t conn, const void *ptr
   }
 
   if (!res)
+  {
       osdg_connection_close(conn);
+      return osdg_no_error;
+  }
 
-  return res;
+  return osdg_protocol_error;
 }
 
 static void devismart_config_status_changed(osdg_connection_t conn, enum osdg_connection_state status)

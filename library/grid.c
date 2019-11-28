@@ -3,10 +3,11 @@
 #include "mainloop.h"
 #include "socket.h"
 
-static int grid_handle_incoming_packet(struct _osdg_connection *conn,
-                                       const unsigned char *data, unsigned int length)
+static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
+                                                 const void *p, unsigned int length)
 {
-    int ret = -1;
+    const unsigned char *data = p;
+    osdg_result_t ret = osdg_no_error;
     unsigned char msgType;
   
     /*
@@ -16,7 +17,7 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
     if (length == 0)
     {
         LOG(ERRORS, "Empty grid packet received");
-        return 0; /* Ignore this */
+        return osdg_no_error; /* Ignore this */
     }
 
     msgType = *data++;
@@ -29,27 +30,32 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
         if (!protocolVer)
         {
             LOG(ERRORS, "MSG_PROTOCOL_VERSION protobuf decoding error");
-            return -1;
+            return osdg_protocol_error;
         }
 
         if (protocolVer->magic != PROTOCOL_VERSION_MAGIC)
         {
             LOG(ERRORS, "Incorrect protocol version magic 0x%08X", protocolVer->magic);
-        } else if (protocolVer->major != PROTOCOL_VERSION_MAJOR || protocolVer->minor != PROTOCOL_VERSION_MINOR)
+            ret = osdg_protocol_error;
+        }
+        else if (protocolVer->major != PROTOCOL_VERSION_MAJOR || protocolVer->minor != PROTOCOL_VERSION_MINOR)
         {
             LOG(ERRORS, "Unsupported grid protocol version %u.%u", protocolVer->major, protocolVer->minor);
-        } else
+            ret = osdg_protocol_error;
+        }
+        else
         {
             LOG(PROTOCOL, "Using protocol version %u.%u", protocolVer->major, protocolVer->minor);
-            ret = 0; /* We're done with the handshake */
+            /* We're done with the handshake */
         }
 
         protocol_version__free_unpacked(protocolVer, NULL);
 
-        if (!ret)
+        if (ret == osdg_no_error)
             connection_set_status(conn, osdg_connected);
 
-    } else if (msgType = MSG_REMOTE_REPLY)
+    }
+    else if (msgType = MSG_REMOTE_REPLY)
     {
         PeerReply *reply = peer_reply__unpack(NULL, length, data);
         struct list_element *req;
@@ -57,7 +63,7 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
         if (!reply)
         {
             DUMP(ERRORS, data, length, "MSG_REMOTE_REPLY protobuf decoding error");
-            return 0; /* Do not abort grid connection */
+            return osdg_no_error; /* Do not abort grid connection */
         }
 
         for (req = conn->forwardList.head; req->next; req = req->next)
@@ -75,7 +81,7 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
 
         LOG(ERRORS, "Received MSG_PEER_REPLY for nonexistent peer %u\n", reply->id);
         peer_reply__free_unpacked(reply, NULL);
-        return 0; /* Ignore, this is not critical */
+        /* Ignore, this is not critical */
     }
     else if (msgType == MSG_INCOMING_CALL)
     {
@@ -85,7 +91,7 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
         if (!call)
         {
             DUMP(ERRORS, data, length, "MSG_INCOMING_CALL protobuf decoding error");
-            return 0; /* Do not abort grid connection */
+            return osdg_no_error; /* Do not abort grid connection */
         }
 
         LOG(PROTOCOL, "Incoming call from %s protocol %s", call->peer->peerid, call->protocol);
@@ -100,7 +106,6 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
     else
     {
         DUMP(PROTOCOL, data, length, "Unhandled grid message type %u", msgType);
-        return 0;
     }
 
     return ret;

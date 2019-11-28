@@ -76,6 +76,7 @@ static inline unsigned long long client_get_nonce(struct _osdg_connection *clien
 
 int receive_packet(struct _osdg_connection *client)
 {
+    osdg_result_t result;
     int ret;
     unsigned int size;
     struct packet_header *header;
@@ -345,7 +346,8 @@ int receive_packet(struct _osdg_connection *client)
         protocolVer.minor = PROTOCOL_VERSION_MINOR;
         /* TODO: Implement client properties */
 
-        ret = sendMESG(client, MSG_PROTOCOL_VERSION, &protocolVer);
+        result = sendMESG(client, MSG_PROTOCOL_VERSION, &protocolVer);
+        ret = connection_set_result(client, result);
     }
     else if (header->command == CMD_MESG)
     {
@@ -356,9 +358,8 @@ int receive_packet(struct _osdg_connection *client)
             return -1;
 
         length = SWAP_16(payload->data.size);
-        ret = connection_handle_data(client, payload->data.data, length);
-        if (ret)
-            client->errorKind = osdg_protocol_error;
+        result = connection_handle_data(client, payload->data.data, length);
+        ret = connection_set_result(client, result);
     }
     else
     {
@@ -369,14 +370,14 @@ int receive_packet(struct _osdg_connection *client)
     return ret;
 }
 
-int sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data)
+osdg_result_t sendMESG(struct _osdg_connection *client, unsigned char dataType, const void *data)
 {
   size_t dataSize = protobuf_c_message_get_packed_size(data) + 1;
   struct packetMESG *mesg = get_MESG_packet(client, dataSize);
   struct mesg_payload *payload;
 
   if (!mesg)
-    return -1;
+    return osdg_buffer_exceeded;
 
   payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
 
@@ -408,13 +409,7 @@ struct packetMESG *get_MESG_packet(struct _osdg_connection *client, size_t dataS
     return mesg;
 }
 
-int send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg)
-{
-    osdg_result_t result = send_MESG_packet_any_thread(conn, mesg);
-    return connection_set_result(conn, result);
-}
-
-osdg_result_t send_MESG_packet_any_thread(struct _osdg_connection *conn, struct packetMESG *mesg)
+osdg_result_t send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg)
 {
     struct mesg_payload *payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
     size_t dataSize = SWAP_16(payload->data.size);

@@ -20,6 +20,7 @@ static int peer_call_remote(struct _osdg_connection *peer)
 {
     ConnectToPeer request = CONNECT_TO_PEER__INIT;
     char peerIdStr[crypto_box_PUBLICKEYBYTES * 2 + 1];
+    osdg_result_t result;
 
     sodium_bin2hex(peerIdStr, sizeof(peerIdStr), peer->serverPubkey, sizeof(peer->serverPubkey));
 
@@ -31,7 +32,8 @@ static int peer_call_remote(struct _osdg_connection *peer)
     request.peerid = peerIdStr;
     request.protocol = peer->protocol;
 
-    return sendMESG(peer->grid, MSG_CALL_REMOTE, &request);
+    result = sendMESG(peer->grid, MSG_CALL_REMOTE, &request);
+    return connection_set_result(peer, result);
 }
 
 osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol)
@@ -74,8 +76,8 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
   return osdg_no_error;
 }
 
-int pairing_handle_incoming_packet(struct _osdg_connection *conn,
-                                          const unsigned char *data, unsigned int length)
+static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *conn,
+                                                    const unsigned char *data, unsigned int length)
 {
     /*
      * Grid messages come in protobuf format, prefixed by one byte, indicating
@@ -102,7 +104,7 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         unsigned char p1[crypto_scalarmult_BYTES];
 
         if (!mesg)
-          return -1;
+          return osdg_buffer_exceeded;
 
         payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
         response = (struct PairingResponse *)payload->data.data;
@@ -150,20 +152,18 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
         if (memcmp(result->result, conn->pairingResult, sizeof(result->result)))
         {
             DUMP(ERRORS, result->result, sizeof(result->result), "Received incorrect reply");
-            conn->errorCode = osdg_protocol_error;
-            return -1;
+            return osdg_protocol_error;
         }
 
         LOG(PROTOCOL, "MSG_PAIRING_RESULT successful");
 
         /* There's nothing more to do here, so we close this connection. */
         connection_terminate(conn, osdg_pairing_complete);
-
-        return 0;
+        return osdg_no_error;
     }
 
     DUMP(ERRORS, data, length, "Unknown pairing message type %u", data[0]);
-    return 0;
+    return osdg_no_error;
 }
 
 static int peer_pair_remote(struct _osdg_connection *peer)
@@ -171,6 +171,7 @@ static int peer_pair_remote(struct _osdg_connection *peer)
     PairRemote request = PAIR_REMOTE__INIT;
     char otpServerPart[SDG_MAX_OTP_BYTES];
     size_t len = strlen(peer->protocol) - 3;
+    osdg_result_t result;
 
     /* We never send the whole OTP to the server, i guess for security.
      * We verify the complete thing during challenge-response verification */
@@ -183,7 +184,8 @@ static int peer_pair_remote(struct _osdg_connection *peer)
     request.id = peer->uid;
     request.otp = otpServerPart;
 
-    return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
+    result = sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
+    return connection_set_result(peer, result);
 }
 
 osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp)
@@ -280,5 +282,5 @@ osdg_result_t osdg_send_data(osdg_connection_t conn, const void *data, int size)
     payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
     memcpy(payload->data.data, data, size);
 
-    return send_MESG_packet_any_thread(conn, mesg);
+    return send_MESG_packet(conn, mesg);
 }
