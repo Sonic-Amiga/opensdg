@@ -106,24 +106,24 @@ static int grid_handle_incoming_packet(struct _osdg_connection *conn,
     return ret;
 }
 
-int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers)
+osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers)
 {
     unsigned int nServers, left, i, res;
     const struct osdg_endpoint **list, **randomized;
 
     if (connection_in_use(client))
-        return -1;
+        return osdg_connection_busy;
 
     for (nServers = 0; servers[nServers].host; nServers++);
     if (nServers == 0)
     {
         client->errorKind = osdg_invalid_parameters;
-        return -1;
+        return osdg_invalid_parameters;
     }
 
     res = connection_allocate_buffers(client);
     if (res)
-        return res;
+        return client->errorKind;
 
     client->mode              = mode_grid;
     client->state             = osdg_connecting;
@@ -159,9 +159,10 @@ int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *s
     free((void *)randomized);
 
     if (res < 0)
+    {
         client->errorKind = osdg_connection_failed;
-    else if (res > 0)
-        res = 0;
+        return osdg_connection_failed;
+    }
 
-    return res;
+    return osdg_no_error;
 }

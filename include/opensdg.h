@@ -20,6 +20,25 @@
 
 typedef unsigned char osdg_key_t[32];
 
+/* API return codes */
+typedef enum
+{
+    osdg_no_error,             /* Everything is OK */
+    osdg_socket_error,         /* Socket I/O error */
+    osdg_crypto_core_error,    /* Sodium internal error; should never happen */
+    osdg_decryption_error,     /* Sodium decryption error; likely corrupted data */
+    osdg_protocol_error,       /* Some invalid data has been received */
+    osdg_buffer_exceeded,      /* Buffer size is not enough for incoming data */
+    osdg_invalid_parameters,   /* Invalid parameters supplied to function call */
+    osdg_connection_failed,    /* Unable to connect to any server */
+    osdg_memory_error,         /* Memory (e. g. buffers) allocation error */
+    osdg_connection_refused,   /* Connection refused by peer */
+    osdg_too_many_connections, /* Connection count exceeds main loop capability */
+    osdg_connection_closed,    /* Connection closed by peer */
+    osdg_connection_busy,      /* Attempt to reuse connection which is already in use */
+    osdg_system_error          /* General OS-specific error */
+} osdg_result_t;
+
 OSDG_API void osdg_set_private_key(const osdg_key_t private_key);
 OSDG_API unsigned char *osdg_get_my_peer_id(void);
 OSDG_API void osdg_create_private_key(osdg_key_t key);
@@ -35,11 +54,11 @@ struct osdg_endpoint
 OSDG_API osdg_connection_t osdg_connection_create(void);
 OSDG_API void osdg_connection_destroy(osdg_connection_t client);
 
-OSDG_API int osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
-OSDG_API int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol);
-OSDG_API int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp);
-OSDG_API int osdg_connection_close(osdg_connection_t client);
-OSDG_API int osdg_send_data(osdg_connection_t conn, const void *data, int size);
+OSDG_API osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers);
+OSDG_API osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol);
+OSDG_API osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp);
+OSDG_API osdg_result_t osdg_connection_close(osdg_connection_t client);
+OSDG_API osdg_result_t osdg_send_data(osdg_connection_t conn, const void *data, int size);
 
 enum osdg_connection_state
 {
@@ -55,30 +74,14 @@ OSDG_API enum osdg_connection_state osdg_get_connection_state(osdg_connection_t 
 typedef void(*osdg_state_cb_t)(osdg_connection_t conn, enum osdg_connection_state state);
 typedef int(*osdg_receive_cb_t)(osdg_connection_t conn, const void *data, unsigned int length);
 
-OSDG_API int osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f);
-OSDG_API int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f);
-
-typedef enum
-{
-  osdg_no_error,             /* Everything is OK */
-  osdg_socket_error,         /* Socket I/O error */
-  osdg_encryption_error,     /* Sodium encryption error; should never happen */
-  osdg_decryption_error,     /* Sodium decryption error; likely corrupted data */
-  osdg_protocol_error,       /* Some invalid data has been received */
-  osdg_buffer_exceeded,      /* Buffer size is not enough for incoming data */
-  osdg_invalid_parameters,   /* Invalid parameters supplied to function call */
-  osdg_connection_failed,    /* Unable to connect to any server */
-  osdg_memory_error,         /* Memory (e. g. buffers) allocation error */
-  osdg_connection_refused,   /* Connection refused by peer */
-  osdg_too_many_connections, /* Connection count exceeds main loop capability */
-  osdg_connection_closed     /* Connection closed by peer */
-} osdg_result_t;
+OSDG_API osdg_result_t osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f);
+OSDG_API osdg_result_t osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f);
 
 OSDG_API osdg_result_t osdg_get_last_result(osdg_connection_t client);
 OSDG_API int osdg_get_last_errno(osdg_connection_t client);
 OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
-OSDG_API int osdg_init(void);
+OSDG_API osdg_result_t osdg_init(void);
 OSDG_API void osdg_shutdown(void);
 
 /* Log masks */

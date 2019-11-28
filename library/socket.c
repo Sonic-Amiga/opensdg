@@ -149,40 +149,25 @@ int receive_data(struct _osdg_connection *client)
 }
 
 /* For simplicity this function is currently blocking */
-int send_data(const unsigned char *buffer, int size, struct _osdg_connection *client)
+osdg_result_t send_data(const unsigned char *buffer, int size, struct _osdg_connection *client)
 {
-    int ret;
-
     while (size)
     {
-        ret = send(client->sock, buffer, size, 0);
+        int ret = send(client->sock, buffer, size, 0);
+
         if (ret < 0)
         {
             fd_set wfds;
-            int err = sockerrno();
 
-            if (err != EWOULDBLOCK)
-            {
-                client->errorKind = osdg_socket_error;
-                client->errorCode = err;
-                return -1;
-            }
+            if (sockerrno() != EWOULDBLOCK)
+                return osdg_socket_error;
 
             FD_ZERO(&wfds);
             FD_SET(client->sock, &wfds);
 
             ret = select((int)client->sock + 1, NULL, &wfds, NULL, NULL);
-            if (ret < 0)
-            {
-                int err = sockerrno();
-
-                if (err != EINTR)
-                {
-                    client->errorKind = osdg_socket_error;
-                    client->errorCode = err;
-                    return -1;
-                }
-            }
+            if (ret < 0 && sockerrno() != EINTR)
+                return osdg_socket_error;
         }
         else
         {
@@ -191,5 +176,5 @@ int send_data(const unsigned char *buffer, int size, struct _osdg_connection *cl
         }
     }
 
-    return 0;
+    return osdg_no_error;
 }

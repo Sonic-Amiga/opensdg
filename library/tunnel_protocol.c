@@ -21,10 +21,16 @@ static inline void dump_packet(struct _osdg_connection *conn, const char *str,
          "Conn[%p] %s: %.4s", conn, str, &header->command);
 }
 
-int send_packet(struct packet_header *header, struct _osdg_connection *client)
+int send_packet(struct packet_header *header, struct _osdg_connection *conn)
 {
-    dump_packet(client, "Sending", header);
-    return send_data((const unsigned char *)header, PACKET_SIZE(header), client);
+    osdg_result_t result = send_packet_any_thread(header, conn);
+    return connection_set_result(conn, result);
+}
+
+osdg_result_t send_packet_any_thread(struct packet_header *header, struct _osdg_connection *conn)
+{
+    dump_packet(conn, "Sending", header);
+    return send_data((const unsigned char *)header, PACKET_SIZE(header), conn);
 }
 
 static int sendTELL(struct _osdg_connection *client)
@@ -179,7 +185,7 @@ int receive_packet(struct _osdg_connection *client)
                          nonce.data, client->serverPubkey, client->clientTempSecret);
         if (ret)
         {
-            client->errorKind = osdg_encryption_error;
+            client->errorKind = osdg_crypto_core_error;
             return -1;
         }
 
@@ -218,7 +224,7 @@ int receive_packet(struct _osdg_connection *client)
         ret = crypto_box_beforenm(client->beforenmData, cookie.serverShortTermPubkey, client->clientTempSecret);
         if (ret)
         {
-            client->errorKind = osdg_encryption_error;
+            client->errorKind = osdg_crypto_core_error;
             return -1;
         }
 
@@ -240,7 +246,7 @@ int receive_packet(struct _osdg_connection *client)
         if (ret)
         {
             client_put_buffer(client, voch);
-            client->errorKind = osdg_encryption_error;
+            client->errorKind = osdg_crypto_core_error;
             return -1;
         }
 
@@ -290,7 +296,7 @@ int receive_packet(struct _osdg_connection *client)
         if (ret)
         {
             client_put_buffer(client, voch);
-            client->errorKind = osdg_encryption_error;
+            client->errorKind = osdg_crypto_core_error;
             return -1;
         }
 
@@ -404,10 +410,17 @@ struct packetMESG *get_MESG_packet(struct _osdg_connection *client, size_t dataS
 
 int send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg)
 {
+    osdg_result_t result = send_MESG_packet_any_thread(conn, mesg);
+    return connection_set_result(conn, result);
+}
+
+osdg_result_t send_MESG_packet_any_thread(struct _osdg_connection *conn, struct packetMESG *mesg)
+{
     struct mesg_payload *payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
     size_t dataSize = SWAP_16(payload->data.size);
     union curvecp_nonce nonce;
     int res;
+    osdg_result_t result;
 
     zero_pad(payload->outerPad);
 
@@ -417,17 +430,17 @@ int send_MESG_packet(struct _osdg_connection *conn, struct packetMESG *mesg)
         nonce.data, conn->beforenmData);
     if (res)
     {
-        conn->errorKind = osdg_encryption_error;
+        result = osdg_crypto_core_error;
     }
     else
     {
         build_header(&mesg->header, CMD_MESG, sizeof(struct packetMESG) + dataSize);
         mesg->nonce = nonce.value[2];
-        res = send_packet(&mesg->header, conn);
+        result = send_packet_any_thread(&mesg->header, conn);
     }
 
     client_put_buffer(conn, mesg);
-    return res;
+    return result;
 }
 
 static int sendForward(struct _osdg_connection *conn)
@@ -435,6 +448,7 @@ static int sendForward(struct _osdg_connection *conn)
     ForwardRemote fwd = FORWARD_REMOTE__INIT;
     struct DataPacket *pkt = client_get_buffer(conn);
     size_t dataSize;
+    osdg_result_t result;
 
     fwd.magic         = FORWARD_REMOTE_MAGIC;
     fwd.protocolmajor = PROTOCOL_VERSION_MAJOR;
@@ -455,7 +469,8 @@ static int sendForward(struct _osdg_connection *conn)
 
     /* MSG_FORWARD_REMOTE is sent unencrypted */
     DUMP(PACKETS, pkt->data, dataSize, "Sending MSG_FORWARD_REMOTE");
-    return send_data((unsigned char *)pkt, sizeof(struct DataPacket) + (int)dataSize, conn);
+    result = send_data((unsigned char *)pkt, sizeof(struct DataPacket) + (int)dataSize, conn);
+    return connection_set_result(conn, result);
 }
 
 int start_connection(struct _osdg_connection *conn)

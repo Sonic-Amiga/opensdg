@@ -13,14 +13,14 @@ static inline void WSACleanup()
 
 #endif
 
-int osdg_init(void)
+osdg_result_t osdg_init(void)
 {
     int res;
 
     if (sodium_init() == -1)
     {
         LOG(ERRORS, "libsodium init failed");
-        return -1;
+        return osdg_crypto_core_error;
     }
 
 #ifdef _WIN32
@@ -37,7 +37,7 @@ int osdg_init(void)
         LOG(ERRORS, "Winsock 2.2 init failed: %s", str);
         LocalFree(str);
 
-        return -1;
+        return osdg_socket_error;
     }
 #endif
 
@@ -45,11 +45,11 @@ int osdg_init(void)
 
     res = mainloop_init();
     if (!res)
-        return 0;
+        return osdg_no_error;
 
     mainloop_events_shutdown();
     WSACleanup();
-    return -1;
+    return osdg_system_error;
 }
 
 void osdg_shutdown(void)

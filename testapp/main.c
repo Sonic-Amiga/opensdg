@@ -74,50 +74,63 @@ static int write_file(void *buffer, int size, const char *name)
     return -1;
 }
 
+void print_result(osdg_result_t res)
+{
+    switch (res)
+    {
+    case osdg_socket_error:
+        printf("Socket I/O error\n");
+        break;
+    case osdg_crypto_core_error:
+        printf("Libsodium encryption error\n");
+        break;
+    case osdg_decryption_error:
+        printf("Libsodium decryption error\n");
+        break;
+    case osdg_protocol_error:
+        printf("Unrecoverable protocol error\n");
+        break;
+    case osdg_buffer_exceeded:
+        printf("Buffer overrun\n");
+        break;
+    case osdg_invalid_parameters:
+        printf("Invalid function call parameters\n");
+        break;
+    case osdg_connection_failed:
+        printf("Failed to connect to host\n");
+        break;
+    case osdg_memory_error:
+        printf("Memory allocation error\n");
+        break;
+    case osdg_connection_refused:
+        printf("Connection refused by peer\n");
+        break;
+    case osdg_too_many_connections:
+        printf("Too many connections\n");
+        break;
+    case osdg_connection_closed:
+        printf("Connection closed by peer\n");
+        break;
+    default:
+        printf("Unknon result code %d\n", res);
+        break;
+    }
+}
+
 void print_client_error(osdg_connection_t client)
 {
-  osdg_result_t kind = osdg_get_last_result(client);
+  osdg_result_t result = osdg_get_last_result(client);
 
-  switch (kind)
+  if (result == osdg_socket_error)
   {
-  case osdg_socket_error:
     printWSAError("Socket I/O error", osdg_get_last_errno(client));
-    break;
-  case osdg_encryption_error:
-    printf("Libsodium encryption error\n");
-    break;
-  case osdg_decryption_error:
-    printf("Libsodium decryption error\n");
-    break;
-  case osdg_protocol_error:
-    printf("Unrecoverable protocol error\n");
-    break;
-  case osdg_buffer_exceeded:
-    printf("Buffer overrun\n");
-    break;
-  case osdg_invalid_parameters:
-    printf("Invalid function call parameters\n");
-    break;
-  case osdg_connection_failed:
-    printf("Failed to connect to host\n");
-    /* Probably not legitimate, but good for internal diagnostics */
-    printWSAError("Last socket error", osdg_get_last_errno(client));
-  case osdg_memory_error:
-    printf("Memory allocation error\n");
-    break;
-  case osdg_connection_refused:
-    printf("Connection refused by peer\n");
-    break;
-  case osdg_too_many_connections:
-    printf("Too many connections\n");
-    break;
-  case osdg_connection_closed:
-    printf("Connection closed by peer\n");
-    break;
-  default:
-    printf("Unknon error kind %d\n", kind);
-    break;
+    return;
   }
+
+  print_result(result);
+  /* Probably not legitimate, but good for internal diagnostics */
+  if (result == osdg_connection_failed)
+    printWSAError("Last socket error", osdg_get_last_errno(client));
 }
 
 const char *getWord(char **p)
@@ -462,7 +475,8 @@ int main(int argc, const char *const *argv)
 {
   unsigned int logmask = OSDG_LOG_ERRORS;
   osdg_key_t clientKey;
-  int i, r;
+  int i;
+  osdg_result_t r;
 
   /* This switches off DOS compatibility mode on Windows console */
   setlocale(LC_ALL, "");
@@ -483,12 +497,13 @@ int main(int argc, const char *const *argv)
   r = osdg_init();
   if (r)
   {
-      printf("Failed to initialize OSDG!\n");
+      printf("Failed to initialize OSDG: ");
+      print_result(r);
       return 255;
   }
 
-  r = read_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
-  if (!r)
+  i = read_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
+  if (!i)
   {
     printf("Loaded private key: ");
     dump_data(clientKey, sizeof(clientKey));
@@ -501,8 +516,8 @@ int main(int argc, const char *const *argv)
       write_file(clientKey, sizeof(clientKey), "osdg_test_private_key.bin");
   }
 
-  r = read_file(&pairings, sizeof(pairings), "osdg_test_pairings.bin");
-  if (r)
+  i = read_file(&pairings, sizeof(pairings), "osdg_test_pairings.bin");
+  if (i)
     pairings.count = 0;
 
   osdg_set_private_key(clientKey);

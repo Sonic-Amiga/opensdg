@@ -130,19 +130,19 @@ void connection_terminate(struct _osdg_connection *conn, enum osdg_connection_st
     connection_set_status(conn, state);
 }
 
-int osdg_connection_close(osdg_connection_t client)
+osdg_result_t osdg_connection_close(osdg_connection_t client)
 {
     /* In this state another request can be in progress;
        adding client->req to main loop's queue for the second time will screw it up
        CHECKME: Will it be comfortable or not ? */
     if (client->state == osdg_connecting)
-      return -1;
+      return osdg_connection_busy;
 
     client->req.code = REQUEST_CLOSE;
     mainloop_send_client_request(&client->req);
 
     /* TODO: Check for dumb things like double close */
-    return 0;
+    return osdg_no_error;
 }
 
 void osdg_connection_destroy(osdg_connection_t client)
@@ -179,20 +179,30 @@ enum osdg_connection_state osdg_get_connection_state(osdg_connection_t conn)
     return conn->state;
 }
 
-int osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f)
+osdg_result_t osdg_set_state_change_callback(osdg_connection_t client, osdg_state_cb_t f)
 {
     client->changeState = f;
-    return 0;
+    return osdg_no_error;
 }
 
 int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f)
 {
-    /* Grid connections have internal data handler, don't screw them up */
+    /* Grid and pairing connections have internal data handler, don't screw them up */
     if (connection_in_use(client) && client->mode != mode_peer)
-        return -1;
+        return osdg_connection_busy;
 
     client->receiveData = f;
-    return 0;
+    return osdg_no_error;
+}
+
+int connection_set_result(struct _osdg_connection *conn, osdg_result_t result)
+{
+    if (result == osdg_no_error)
+        return 0;
+    if (result == osdg_socket_error)
+        conn->errorCode = sockerrno();
+    conn->errorKind = result;
+    return -1;
 }
 
 void *client_get_buffer(struct _osdg_connection *client)

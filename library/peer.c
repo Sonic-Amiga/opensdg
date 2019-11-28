@@ -7,16 +7,16 @@
 #include "opensdg.h"
 #include "socket.h"
 
-int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol)
+osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const osdg_key_t peerId, const char *protocol)
 {
   int ret;
   
   if (connection_in_use(peer))
-    return -1;
+    return osdg_connection_busy;
 
   ret = connection_allocate_buffers(peer);
   if (ret)
-    return ret;
+    return peer->errorKind;
 
   peer->mode =  mode_peer;
   peer->state = osdg_connecting;
@@ -45,7 +45,7 @@ int osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t peer, const
   peer->req.code = REQUEST_CALL_REMOTE;
 
   mainloop_send_client_request(&peer->req);
-  return 0;
+  return osdg_no_error;
 }
 
 int pairing_handle_incoming_packet(struct _osdg_connection *conn,
@@ -142,18 +142,18 @@ int pairing_handle_incoming_packet(struct _osdg_connection *conn,
     return 0;
 }
 
-int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp)
+osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char *otp)
 {
     size_t len = strlen(otp);
     int ret;
 
     if (connection_in_use(peer))
-        return -1;
+        return osdg_connection_busy;
 
     if (len < SDG_MIN_OTP_LENGTH || len >= SDG_MAX_OTP_BYTES)
     {
         peer->errorKind = osdg_invalid_parameters;
-        return -1;
+        return osdg_invalid_parameters;
     }
 
     memcpy(peer->protocol, otp, len + 1);
@@ -163,7 +163,7 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
 
     ret = connection_allocate_buffers(peer);
     if (ret)
-        return ret;
+        return peer->errorKind;
 
     peer->discardFirstBytes = 0;
     peer->receiveData       = pairing_handle_incoming_packet;
@@ -173,7 +173,7 @@ int osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, const char 
     peer->req.code          = REQUEST_PAIR_REMOTE;
 
     mainloop_send_client_request(&peer->req);
-    return 0;
+    return osdg_no_error;
 }
 
 int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *reply)
@@ -260,16 +260,16 @@ int peer_pair_remote(struct _osdg_connection *peer)
     return sendMESG(peer->grid, MSG_PAIR_REMOTE, &request);
 }
 
-int osdg_send_data(osdg_connection_t conn, const void *data, int size)
+osdg_result_t osdg_send_data(osdg_connection_t conn, const void *data, int size)
 {
     struct packetMESG *mesg = get_MESG_packet(conn, size);
     struct mesg_payload *payload;
 
     if (!mesg)
-        return -1;
+        return osdg_buffer_exceeded;
 
     payload = (struct mesg_payload *)(mesg->mesg_payload - crypto_box_BOXZEROBYTES);
     memcpy(payload->data.data, data, size);
 
-    return send_MESG_packet(conn, mesg);
+    return send_MESG_packet_any_thread(conn, mesg);
 }

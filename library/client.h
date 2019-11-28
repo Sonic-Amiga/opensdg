@@ -85,6 +85,7 @@ void connection_read_data(struct _osdg_connection *conn);
 int connection_handle_data(struct _osdg_connection *conn, const unsigned char *data, unsigned int length);
 void connection_shutdown(struct _osdg_connection *conn);
 void connection_terminate(struct _osdg_connection *conn, enum osdg_connection_state state);
+int connection_set_result(struct _osdg_connection *conn, osdg_result_t result);
 
 static inline int connection_in_use(struct _osdg_connection *conn)
 {
