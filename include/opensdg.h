@@ -84,6 +84,8 @@ OSDG_API osdg_result_t osdg_get_last_result(osdg_connection_t client);
 OSDG_API int osdg_get_last_errno(osdg_connection_t client);
 OSDG_API const unsigned char *osdg_get_peer_id(osdg_connection_t conn);
 
+OSDG_API void osdg_set_ping_interval(osdg_connection_t conn, unsigned int seconds);
+
 OSDG_API osdg_result_t osdg_init(void);
 OSDG_API void osdg_shutdown(void);
 

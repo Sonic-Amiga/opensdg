@@ -43,13 +43,15 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
   if (connection_in_use(peer))
     return osdg_wrong_state;
 
-  ret = connection_allocate_buffers(peer);
+  ret = connection_init(peer);
   if (ret)
     return peer->errorKind;
 
   peer->mode =  mode_peer;
-  peer->state = osdg_connecting;
+  peer->grid = grid;
+
   memcpy(peer->serverPubkey, peerId, sizeof(osdg_key_t));
+  strncpy(peer->protocol, protocol, sizeof(peer->protocol));
 
   /*
    * DEVISmart thermostat has a quirk: very first packet is prefixed with
@@ -65,12 +67,6 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
    */
   if (!strcmp(protocol, "dominion-1.0"))
       peer->discardFirstBytes = 1;
-  else
-      peer->discardFirstBytes = 0;
-
-  strncpy(peer->protocol, protocol, sizeof(peer->protocol));
-
-  peer->grid = grid;
 
   mainloop_send_client_request(&peer->req, peer_call_remote);
   return osdg_no_error;
@@ -216,15 +212,13 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
     /* Don't return garbage from osdg_get_peer_id() */
     memset(peer->serverPubkey, 0, sizeof(peer->serverPubkey));
 
-    ret = connection_allocate_buffers(peer);
+    ret = connection_init(peer);
     if (ret)
         return peer->errorKind;
 
-    peer->discardFirstBytes = 0;
-    peer->receiveData       = pairing_handle_incoming_packet;
-    peer->mode              = mode_pairing;
-    peer->state             = osdg_connecting;
-    peer->grid              = grid;
+    peer->receiveData = pairing_handle_incoming_packet;
+    peer->mode        = mode_pairing;
+    peer->grid        = grid;
 
     mainloop_send_client_request(&peer->req, peer_pair_remote);
     return osdg_no_error;

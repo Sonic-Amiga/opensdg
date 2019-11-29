@@ -1,5 +1,6 @@
 #include <sodium.h>
 #include <string.h>
+#include <time.h>
 
 #include "client.h"
 #include "logging.h"
@@ -77,6 +78,7 @@ osdg_connection_t osdg_connection_create(void)
    */
   client->bufferSize    = 1536;
   client->receiveBuffer = NULL;
+  client->pingInterval  = 0;
 
   list_init(&client->forwardList);
   queue_init(&client->bufferQueue);
@@ -217,6 +219,15 @@ void *osdg_get_user_data(osdg_connection_t conn)
     return conn->userData;
 }
 
+void osdg_set_ping_interval(osdg_connection_t conn, unsigned int seconds)
+{
+    conn->pingInterval = seconds;
+
+    /* This causes main loop timeout update */
+    if (conn->state == osdg_connected)
+        mainloop_client_event();
+}
+
 int connection_set_result(struct _osdg_connection *conn, osdg_result_t result)
 {
     if (result == osdg_no_error)
@@ -259,6 +270,8 @@ int connection_handle_data(struct _osdg_connection *conn, const unsigned char *d
 {
     unsigned int discard = conn->discardFirstBytes;
     conn->discardFirstBytes = 0; /* Discarded */
+
+    conn->lastActivity = time(NULL);
 
     if (length <= discard)
         return 0; /* Just in case, we shouldn't get here */

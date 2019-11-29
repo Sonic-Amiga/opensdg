@@ -126,14 +126,17 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_e
         return osdg_invalid_parameters;
     }
 
-    res = connection_allocate_buffers(client);
+    res = connection_init(client);
     if (res)
         return client->errorKind;
 
-    client->mode              = mode_grid;
-    client->state             = osdg_connecting;
-    client->receiveData       = grid_handle_incoming_packet;
-    client->discardFirstBytes = 0;
+    client->mode        = mode_grid;
+    client->receiveData = grid_handle_incoming_packet;
+
+    /* Grid connection is not used often; most of the time it just keeps silence.
+       A ping is mandatory, otherwise the server will drop the connection */
+    if (!client->pingInterval)
+        client->pingInterval = 30;
 
     /* Permute servers in random order in order to distribute the load */
     list = malloc(nServers * sizeof(void *));

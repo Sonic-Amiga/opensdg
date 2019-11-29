@@ -55,6 +55,8 @@ struct _osdg_connection
   unsigned int               bytesReceived;
   unsigned int               bytesLeft;
   unsigned int               discardFirstBytes;
+  unsigned int               pingInterval;
+  time_t                     lastActivity;
 };
 
 /* Client's long term key pair, global */
@@ -67,6 +69,20 @@ void *client_get_buffer(struct _osdg_connection *conn);
 static inline void client_put_buffer(struct _osdg_connection *client, void *ptr)
 {
     queue_put(&client->bufferQueue, ptr);
+}
+
+static inline int connection_init(struct _osdg_connection *conn)
+{
+    int ret = connection_allocate_buffers(conn);
+
+    if (ret)
+        return ret;
+
+    conn->discardFirstBytes = 0;
+    conn->state             = osdg_connecting;
+    conn->lastActivity      = -1; /* Prevent PINGs before the first data packet is read */
+
+    return 0;
 }
 
 void connection_read_data(struct _osdg_connection *conn);
