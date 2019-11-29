@@ -199,7 +199,7 @@ osdg_result_t osdg_set_state_change_callback(osdg_connection_t client, osdg_stat
     return osdg_no_error;
 }
 
-int osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f)
+osdg_result_t osdg_set_receive_data_callback(osdg_connection_t client, osdg_receive_cb_t f)
 {
     /* Grid and pairing connections have internal data handler, don't screw them up */
     if (connection_in_use(client) && client->mode != mode_peer)

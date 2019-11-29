@@ -103,8 +103,6 @@ static inline void connection_set_status(struct _osdg_connection *conn, enum osd
     conn->changeState(conn, state);
 }
 
-int peer_call_remote(struct _osdg_connection *peer);
-int peer_pair_remote(struct _osdg_connection *peer);
 int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *reply);
 
 static inline struct _osdg_connection *get_connection(struct list_element *forwardReq)

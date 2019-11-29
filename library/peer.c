@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <sodium.h>
 
 #include "client.h"
@@ -73,8 +74,10 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
 }
 
 static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *conn,
-                                                    const unsigned char *data, unsigned int length)
+                                                    const void *p, unsigned int length)
 {
+    const char *data = p;
+
     /*
      * Grid messages come in protobuf format, prefixed by one byte, indicating
      * message type.
@@ -98,6 +101,7 @@ static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *con
         unsigned char rnd[crypto_scalarmult_SCALARBYTES];
         unsigned char base[crypto_scalarmult_BYTES];
         unsigned char p1[crypto_scalarmult_BYTES];
+        int ret;
 
         if (!mesg)
           return osdg_buffer_exceeded;
@@ -122,12 +126,19 @@ static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *con
 
         crypto_stream_xor(xor, challenge->Y, sizeof(challenge->Y), challenge->nonce, hash);
         crypto_scalarmult_base(base, conn->beforenmData);
-        crypto_scalarmult(p1, xor, base);
+        ret = crypto_scalarmult(p1, xor, base);
+        if (ret)
+            return osdg_crypto_core_error;
+
         randombytes(rnd, sizeof(rnd));
-        crypto_scalarmult(response->X, rnd, p1);
+        ret = crypto_scalarmult(response->X, rnd, p1);
+        if (ret)
+            return osdg_crypto_core_error;
 
         /* This is used in both hashing rounds below, avoid copying */
-        crypto_scalarmult(&buf[crypto_hash_BYTES], rnd, challenge->X);
+        ret = crypto_scalarmult(&buf[crypto_hash_BYTES], rnd, challenge->X);
+        if (ret)
+            return osdg_crypto_core_error;
 
         crypto_hash(buf, challenge->X, sizeof(challenge->X));
         crypto_hash(hash, buf, sizeof(buf));

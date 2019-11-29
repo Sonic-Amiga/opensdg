@@ -352,7 +352,7 @@ static int handle_single_packet(const uint8_t *data, uint32_t size)
   return packetSize;
 }
 
-int devismart_receive_data(osdg_connection_t conn, const void *ptr, unsigned int size)
+osdg_result_t devismart_receive_data(osdg_connection_t conn, const void *ptr, unsigned int size)
 {
     const uint8_t *data = ptr;
     const uint8_t *start = data;

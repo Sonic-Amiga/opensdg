@@ -198,7 +198,7 @@ int add_pairing(osdg_key_t peerId, const char *description)
   
   for (i = 0; i < pairings.count; i++)
   {
-    if (!memcmp(pairings.data[i].peerId, peerId, sizeof(peerId)))
+    if (!memcmp(pairings.data[i].peerId, peerId, sizeof(osdg_key_t)))
       return 0;
   }
 
@@ -209,7 +209,7 @@ int add_pairing(osdg_key_t peerId, const char *description)
   }
 
   i = pairings.count++;
-  memcpy(pairings.data[i].peerId, peerId, sizeof(peerId));
+  memcpy(pairings.data[i].peerId, peerId, sizeof(osdg_key_t));
   strcpy(pairings.data[i].description, description);
 
   return 0;
@@ -336,7 +336,7 @@ static void pairing_status_changed(osdg_connection_t conn, enum osdg_connection_
     osdg_connection_destroy(conn);
 }
 
-static osdg_result_t default_peer_receive_data(osdg_connection_t conn, const unsigned char *data, unsigned int length)
+static osdg_result_t default_peer_receive_data(osdg_connection_t conn, const void *data, unsigned int length)
 {
     printf("Received data from the peer: ");
     dump_data(data, length);
