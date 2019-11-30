@@ -55,8 +55,10 @@ struct _osdg_connection
   unsigned int               bytesReceived;
   unsigned int               bytesLeft;
   unsigned int               discardFirstBytes;
-  unsigned int               pingInterval;
-  time_t                     lastActivity;
+  unsigned int               pingSequence;      /* Ping packet counter, monotonically increases */
+  unsigned int               pingInterval;      /* In milliseconds */
+  unsigned int               pingDelay;         /* Last PING roundtrip time */
+  unsigned long long         lastPing;          /* When the last PING has been sent */
 };
 
 /* Client's long term key pair, global */
@@ -80,7 +82,11 @@ static inline int connection_init(struct _osdg_connection *conn)
 
     conn->discardFirstBytes = 0;
     conn->state             = osdg_connecting;
-    conn->lastActivity      = -1; /* Prevent PINGs before the first data packet is read */
+    conn->pingSequence      = 0;
+    conn->pingDelay         = -1;
+    /* This causes mainloop_ping() to ignore the connection until
+       the very first PING has been sent manually */
+    conn->lastPing          = -1LL;
 
     return 0;
 }
@@ -109,5 +115,7 @@ static inline struct _osdg_connection *get_connection(struct list_element *forwa
 {
     return (struct _osdg_connection *)((char *)forwardReq - offsetof(struct _osdg_connection, forwardReq));
 }
+
+osdg_result_t connection_ping(struct _osdg_connection *grid);
 
 #endif

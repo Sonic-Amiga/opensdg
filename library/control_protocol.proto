@@ -25,6 +25,19 @@ message ProtocolVersion
   repeated Property properties = 4;
 }
 
+// MSG_PING
+message Ping
+{
+  required uint32 seq  = 1;
+  optional uint32 delay = 2;
+}
+
+// MSG_PONG
+message Pong
+{
+  required uint32 seq = 1;
+}
+
 // MSG_FORWARD_REPLY
 message ForwardReply
 {

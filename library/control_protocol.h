@@ -7,9 +7,8 @@
 #define MSG_FORWARD_REMOTE      0
 #define MSG_PROTOCOL_VERSION    1
 #define MSG_FORWARD_REPLY       2
-#define MSG_PAIRING_CHALLENGE   3
-#define MSG_PAIRING_RESPONSE    4
-#define MSG_PAIRING_RESULT      5
+#define MSG_PING                4
+#define MSG_PONG                5
 #define MSG_CALL_REMOTE         10
 #define MSG_REMOTE_REPLY        11
 #define MSG_INCOMING_CALL       12
@@ -22,6 +21,11 @@
 #define PROTOCOL_VERSION_MAGIC   0xF09D8CA8
 #define PROTOCOL_VERSION_MAJOR   1
 #define PROTOCOL_VERSION_MINOR   0
+
+/* Pairing message types */
+#define MSG_PAIRING_CHALLENGE   3
+#define MSG_PAIRING_RESPONSE    4
+#define MSG_PAIRING_RESULT      5
 
 #pragma pack(1)
 

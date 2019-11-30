@@ -460,6 +460,27 @@ static void close_connection(char *argStr)
     osdg_connection_close(peers[idx]);
 }
 
+static void set_ping_interval(osdg_connection_t client, char *argStr)
+{
+    const char *arg = getWord(&argStr);
+    char *end;
+    unsigned int val = strtoul(arg, &end, 10);
+    osdg_result_t r;
+
+    if (arg == end)
+    {
+        printf("Invalid ping interval %s!\n", arg);
+        return;
+    }
+
+    r = osdg_set_ping_interval(client, val);
+    if (r != osdg_no_error)
+    {
+        printf("Failed to set ping interval: ");
+        print_result(r);
+    }
+}
+
 /* Danfoss cloud servers */
 static const struct osdg_endpoint servers[] =
 {
@@ -562,6 +583,7 @@ int main(int argc, const char *const *argv)
                  "connect [peer # or ID] - connect to peer by index or raw ID\n"
                  "list pairings          - list known pairings\n"
                  "list peers             - list current connections\n"
+                 "ping [interval]        - set grid ping interval in seconds\n"
                  "quit                   - end session\n");
         }
         else if (!strcmp(cmd, "connect"))
@@ -585,6 +607,10 @@ int main(int argc, const char *const *argv)
             list_peers();
           else
             printf("Unknown item %s", cmd);
+        }
+        else if (!strcmp(cmd, "ping"))
+        {
+            set_ping_interval(client, p);
         }
         else if (!strcmp(cmd, "quit"))
         {

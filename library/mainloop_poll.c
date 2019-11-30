@@ -64,9 +64,11 @@ int mainloop_add_connection(struct _osdg_connection *conn)
 
 static void *osdg_main(void *arg)
 {
+    int timeout = -1;
+
     for (;;)
     {
-        int r = poll(events, num_connections + 1, -1);
+        int r = poll(events, num_connections + 1, timeout);
 
         if (r > 0)
         {
@@ -83,6 +85,9 @@ static void *osdg_main(void *arg)
                         /* Read the eventfd in order to reset it */
                         read(events[i].fd, &buf, sizeof(buf));
                         mainloop_handle_client_requests();
+
+                        /* Ping interval for some connections could have been changed */
+                        timeout = mainloop_ping(connections, num_connections);
                     }
                     else
                     {
@@ -98,10 +103,16 @@ static void *osdg_main(void *arg)
             if (stopFlag)
                 break;
         }
+        else if (r == 0)
+        {
+            timeout = mainloop_ping(connections, num_connections);
+        }
         else if (r == -1 && errno != EINTR && errno != EAGAIN)
         {
             return NULL; /* OS error code will be set */
         }
+
+        if ()
     }
 
     return NULL;

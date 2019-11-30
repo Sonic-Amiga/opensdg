@@ -16,7 +16,7 @@ static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
      */
     if (length == 0)
     {
-        LOG(ERRORS, "Empty grid packet received");
+        LOG(ERRORS, "Grid[%p] Empty packet received", conn);
         return osdg_no_error; /* Ignore this */
     }
 
@@ -51,9 +51,33 @@ static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
 
         protocol_version__free_unpacked(protocolVer, NULL);
 
+        /* Send the very first ping right after the connection has been established.
+           This is what the original library does. */
         if (ret == osdg_no_error)
-            connection_set_status(conn, osdg_connected);
+            ret = connection_ping(conn);
+    }
+    else if (msgType == MSG_PONG)
+    {
+        Pong *reply = pong__unpack(NULL, length, data);
 
+        if (!reply)
+        {
+            DUMP(ERRORS, data, length, "Grid[%p] MSG_PONG protobuf decoding error", conn);
+            return osdg_no_error; /* Do not abort grid connection */
+        }
+
+        /* Ignore old stray PONGs, this is what the original library does */
+        if (reply->seq == conn->pingSequence - 1)
+        {
+            conn->pingDelay = (int)(timestamp() - conn->lastPing);
+            LOG(PROTOCOL, "Grid[%p] PING roundtrip %ld ms", conn, conn->pingDelay);
+        }
+
+        pong__free_unpacked(reply, NULL);
+
+        /* This is reply to the very first PING, we are connected now. */
+        if (conn->state == osdg_connecting)
+            connection_set_status(conn, osdg_connected);
     }
     else if (msgType = MSG_REMOTE_REPLY)
     {
@@ -136,7 +160,7 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_e
     /* Grid connection is not used often; most of the time it just keeps silence.
        A ping is mandatory, otherwise the server will drop the connection */
     if (!client->pingInterval)
-        client->pingInterval = 30;
+        client->pingInterval = 30 * MILLISECONDS_PER_SECOND;
 
     /* Permute servers in random order in order to distribute the load */
     list = malloc(nServers * sizeof(void *));
@@ -172,4 +196,36 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_e
     }
 
     return osdg_no_error;
+}
+
+osdg_result_t osdg_set_ping_interval(osdg_connection_t conn, unsigned int seconds)
+{
+    /* Only grid can be pinged */
+    if (connection_in_use(conn) && conn->mode != mode_grid)
+        return osdg_wrong_state;
+
+    conn->pingInterval = seconds * MILLISECONDS_PER_SECOND;
+
+    /* This causes main loop timeout update */
+    if (conn->state == osdg_connected)
+        mainloop_client_event();
+
+    return osdg_no_error;
+}
+
+osdg_result_t connection_ping(struct _osdg_connection *grid)
+{
+    Ping ping = PING__INIT;
+
+    ping.seq = grid->pingSequence++;
+    /* The server wants to know ping roundtrip time in milliseconds.
+       For the very first ping packet there's no data yet */
+    if (grid->pingDelay != -1)
+    {
+        ping.has_delay = 1;
+        ping.delay = grid->pingDelay;
+    }
+
+    grid->lastPing = timestamp();
+    return sendMESG(grid, MSG_PING, &ping);
 }

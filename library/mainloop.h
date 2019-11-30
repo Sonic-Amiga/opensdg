@@ -21,5 +21,6 @@ void mainloop_shutdown(void);
 void mainloop_client_event(void);
 int mainloop_add_connection(struct _osdg_connection *conn);
 void mainloop_remove_connection(struct _osdg_connection *conn);
+int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount);
 
 #endif
