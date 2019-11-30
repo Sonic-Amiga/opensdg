@@ -4,8 +4,15 @@ if (MSVC)
   if ("${PROTOBUF_ROOT}" STREQUAL "")
     set(PROTOBUF_ROOT "C:/Program Files/protobuf-c")
   endif ("${PROTOBUF_ROOT}" STREQUAL "")
-  set(SODIUM_PATH ${SODIUM_ROOT}/${CMAKE_VS_PLATFORM_NAME}/Release/v142/dynamic)
   set(PROTOBUF_PATH ${PROTOBUF_ROOT}/lib)
+
+  if (STATIC_BUILD)
+    set(SODIUM_FLAVOR static)
+  else (STATIC_BUILD)
+    set(SODIUM_FLAVOR dynamic)
+  endif (STATIC_BUILD)
+  set(SODIUM_PATH ${SODIUM_ROOT}/${CMAKE_VS_PLATFORM_NAME}/Release/v142/${SODIUM_FLAVOR})
+
   set(EXTRA_LIBS Ws2_32)
 else (MSVC)
   set(EXTRA_LIBS pthread)
@@ -47,8 +54,13 @@ add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
                    COMMAND ${PROTOC} --c_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path ${CMAKE_CURRENT_SOURCE_DIR} control_protocol.proto
                    DEPENDS control_protocol.proto) 
 
-add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${SYSDEP_SOURCES} ${PUBLIC_INCLUDE_FILES})
-set_property(TARGET opensdg PROPERTY COMPILE_DEFINITIONS OPENSDG_BUILD)
+if (STATIC_BUILD)
+  add_library(opensdg STATIC ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${SYSDEP_SOURCES} ${PUBLIC_INCLUDE_FILES})
+  set_property(TARGET opensdg PROPERTY COMPILE_DEFINITIONS SODIUM_STATIC)
+else (STATIC_BUILD)
+  add_library(opensdg SHARED ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${SYSDEP_SOURCES} ${PUBLIC_INCLUDE_FILES})
+  set_property(TARGET opensdg PROPERTY COMPILE_DEFINITIONS OPENSDG_BUILD)
+endif (STATIC_BUILD)
 target_include_directories(opensdg PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
 

@@ -3,13 +3,18 @@
 
 #ifdef _WIN32
 #include <WinSock2.h>
+#ifndef OPENSDG_STATIC
 #ifdef OPENSDG_BUILD
 #define OSDG_API __declspec(dllexport)
 #else
 #define OSDG_API __declspec(dllimport)
 #endif
+#endif
 #else
 #define SOCKET int
+#endif
+
+#ifndef OSDG_API
 #define OSDG_API
 #endif
 

@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(OpenSDG)
-option(MSVC_STATIC_BUILD "MSVC_STATIC_BUILD" ON)
 
 include_directories(include)
 
@@ -10,7 +9,11 @@ set(PUBLIC_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/opensdg.h)
 if (MSVC)
   # Microsoft has their own ideas on C standards, shut them up
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-  if (MSVC_STATIC_BUILD)
+
+  option(STATIC_BUILD "STATIC_BUILD" ON)
+
+  if (STATIC_BUILD)
+  	add_compile_definitions(OPENSDG_STATIC)
 	# In case we are building static libraries, link also the runtime library statically
 	# so that MSVCR*.DLL is not required at runtime.
 	# https://msdn.microsoft.com/en-us/library/2kzt1wy3.aspx
@@ -23,7 +26,9 @@ if (MSVC)
 		string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
 	  endif(${flag_var} MATCHES "/MD")
 	endforeach(flag_var)
-  endif (MSVC_STATIC_BUILD)
+  endif (STATIC_BUILD)
+else (MSVC)
+  option(STATIC_BUILD "STATIC_BUILD" OFF)
 endif (MSVC)
 
 add_subdirectory(library)
