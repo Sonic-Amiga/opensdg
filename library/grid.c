@@ -135,15 +135,29 @@ static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
     return ret;
 }
 
-osdg_result_t osdg_connect_to_grid(osdg_connection_t client, const struct osdg_endpoint *servers)
+/* Well-known grid servers */
+osdg_result_t osdg_connect_to_danfoss(osdg_connection_t conn)
 {
-    unsigned int nServers, left, i, res;
+    static const struct osdg_endpoint danfoss_servers[] =
+    {
+        {"77.66.11.90" , 443},
+        {"77.66.11.92" , 443},
+        {"5.179.92.180", 443},
+        {"5.179.92.182", 443}
+    };
+
+    return osdg_connect_to_grid(conn, danfoss_servers, 4);
+}
+
+osdg_result_t osdg_connect_to_grid(osdg_connection_t client,
+                                   const struct osdg_endpoint *servers, unsigned int nServers)
+{
+    unsigned int left, i, res;
     const struct osdg_endpoint **list, **randomized;
 
     if (connection_in_use(client))
         return osdg_wrong_state;
 
-    for (nServers = 0; servers[nServers].host; nServers++);
     if (nServers == 0)
     {
         client->errorKind = osdg_invalid_parameters;

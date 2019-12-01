@@ -481,16 +481,6 @@ static void set_ping_interval(osdg_connection_t client, char *argStr)
     }
 }
 
-/* Danfoss cloud servers */
-static const struct osdg_endpoint servers[] =
-{
-  {"77.66.11.90" , 443},
-  {"77.66.11.92" , 443},
-  {"5.179.92.180", 443},
-  {"5.179.92.182", 443},
-  {NULL, 0}
-};
-
 static osdg_connection_t client;
 
 osdg_connection_t get_grid_connection(void)
@@ -558,7 +548,7 @@ int main(int argc, const char *const *argv)
 
   osdg_set_state_change_callback(client, grid_status_changed);
 
-  r = osdg_connect_to_grid(client, servers);
+  r = osdg_connect_to_danfoss(client);
   if (r == 0)
   {
       printf("Enter command; \"help\" to get help\n");
