@@ -70,7 +70,7 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
       peer->discardFirstBytes = 1;
 
   mainloop_send_client_request(&peer->req, peer_call_remote);
-  return osdg_no_error;
+  return connection_wait(peer);
 }
 
 static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *conn,
@@ -232,7 +232,7 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
     peer->grid        = grid;
 
     mainloop_send_client_request(&peer->req, peer_pair_remote);
-    return osdg_no_error;
+    return connection_wait(peer);
 }
 
 int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *reply)

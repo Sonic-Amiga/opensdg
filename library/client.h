@@ -2,7 +2,7 @@
 #define _INTERNAL_CLIENT_H
 
 #include <errno.h>
-#include "pthread_wrapper.h"
+#include "events_wrapper.h"
 
 #include "opensdg.h"
 #include "tunnel_protocol.h"
@@ -47,6 +47,8 @@ struct _osdg_connection
   struct list                forwardList;
   char                       protocol[SDG_MAX_PROTOCOL_BYTES];
   unsigned char              pairingResult[32];
+  event_t                    completion;
+  char                       blocking;
   char                       closing;
   char                       haveBuffers;
   size_t                     bufferSize;
@@ -102,12 +104,8 @@ static inline int connection_in_use(struct _osdg_connection *conn)
     return conn->state == osdg_connecting || conn->state == osdg_connected;
 }
 
-static inline void connection_set_status(struct _osdg_connection *conn, enum osdg_connection_state state)
-{
-  conn->state = state;
-  if (conn->changeState)
-    conn->changeState(conn, state);
-}
+void connection_set_status(struct _osdg_connection *conn, enum osdg_connection_state state);
+osdg_result_t connection_wait(struct _osdg_connection *conn);
 
 int peer_handle_remote_call_reply(struct _osdg_connection *peer, PeerReply *reply);
 

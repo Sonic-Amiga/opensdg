@@ -209,7 +209,7 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client,
         return osdg_connection_failed;
     }
 
-    return osdg_no_error;
+    return connection_wait(client);
 }
 
 osdg_result_t osdg_set_ping_interval(osdg_connection_t conn, unsigned int seconds)

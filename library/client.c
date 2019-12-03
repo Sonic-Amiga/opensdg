@@ -70,6 +70,7 @@ osdg_connection_t osdg_connection_create(void)
   client->userData      = NULL;
   client->nonce         = 0;
   client->tunnelId      = NULL;
+  client->blocking      = 0;
   client->closing       = 0;
   client->haveBuffers   = 0;
   /*
@@ -82,6 +83,7 @@ osdg_connection_t osdg_connection_create(void)
 
   list_init(&client->forwardList);
   queue_init(&client->bufferQueue);
+  event_init(&client->completion);
 
   return client;
 }
@@ -142,7 +144,7 @@ static int connection_close(struct _osdg_connection *conn)
     return 0;
 }
 
-osdg_result_t osdg_connection_close(osdg_connection_t client)
+osdg_result_t osdg_connection_close(osdg_connection_t conn)
 {
     /* In this state another request can be in progress;
        adding client->req to main loop's queue for the second time will screw it up
@@ -150,13 +152,12 @@ osdg_result_t osdg_connection_close(osdg_connection_t client)
        We specify "closing" state as completely separate flag in order to avoid race
        with main thread, which could have errored out at the very same moment and
        would be setting "error" state */
-    if (client->state == osdg_connecting || client->closing)
+    if (conn->state == osdg_connecting || conn->closing)
       return osdg_wrong_state;
 
-    client->closing  = 1;
-    mainloop_send_client_request(&client->req, connection_close);
-
-    return osdg_no_error;
+    conn->closing  = 1;
+    mainloop_send_client_request(&conn->req, connection_close);
+    return connection_wait(conn);
 }
 
 void osdg_connection_destroy(osdg_connection_t client)
@@ -217,6 +218,44 @@ void osdg_set_user_data(osdg_connection_t conn, void *data)
 void *osdg_get_user_data(osdg_connection_t conn)
 {
     return conn->userData;
+}
+
+void osdg_set_blocking_mode(osdg_connection_t conn, int blocking)
+{
+    conn->blocking = blocking;
+}
+
+int osdg_get_blocking_mode(osdg_connection_t conn)
+{
+    return conn->blocking;
+}
+
+void connection_set_status(struct _osdg_connection *conn, enum osdg_connection_state state)
+{
+    enum osdg_connection_state oldState = conn->state;
+    /* For non-blocking connection state change callback can destroy the connection
+       if it won't be used any more, so read blocking flag right now. */
+    int blocking = conn->blocking;
+
+    conn->state = state;
+    if (conn->changeState)
+        conn->changeState(conn, state);
+    if (!blocking)
+        return;
+    if (oldState == osdg_connecting || state == osdg_closed || state == osdg_pairing_complete)
+        event_post(&conn->completion);
+}
+
+osdg_result_t connection_wait(struct _osdg_connection *conn)
+{
+    if (conn->blocking)
+    {
+        event_wait(&conn->completion);
+        if (conn->state == osdg_error)
+            return conn->errorKind;
+    }
+
+    return osdg_no_error;
 }
 
 int connection_set_result(struct _osdg_connection *conn, osdg_result_t result)

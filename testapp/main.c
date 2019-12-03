@@ -291,9 +291,6 @@ static void grid_status_changed(osdg_connection_t conn, enum osdg_connection_sta
 {
     printf("Grid");
     print_status(conn, status);
-
-    if (status == osdg_closed)
-        osdg_connection_destroy(conn);
 }
 
 static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_state status)
@@ -303,7 +300,7 @@ static void peer_status_changed(osdg_connection_t conn, enum osdg_connection_sta
     printf("Peer #%d", idx);
     print_status(conn, status);
 
-    if (status == osdg_closed)
+    if ((!osdg_get_blocking_mode(conn)) && (status == osdg_closed))
     {
         peers[idx] = NULL;
         osdg_connection_destroy(conn);
@@ -332,8 +329,6 @@ static void pairing_status_changed(osdg_connection_t conn, enum osdg_connection_
         printf("Invalid pairing status %u\n", status); /* You should not see this */
         break;
     }
-
-    osdg_connection_destroy(conn);
 }
 
 static osdg_result_t default_peer_receive_data(osdg_connection_t conn, const void *data, unsigned int length)
@@ -342,6 +337,8 @@ static osdg_result_t default_peer_receive_data(osdg_connection_t conn, const voi
     dump_data(data, length);
     return osdg_no_error;
 }
+
+static int blockingMode = 0;
 
 static void connect_to_peer(osdg_connection_t client, char *argStr)
 {
@@ -395,6 +392,7 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
     return;
   }
 
+  osdg_set_blocking_mode(peer, blockingMode);
   osdg_set_state_change_callback(peer, peer_status_changed);
 
   if (!strcmp(arg, DEVISMART_PROTOCOL_NAME))
@@ -425,7 +423,7 @@ static void pair_remote_peer(osdg_connection_t client, char *argStr)
 {
   const char *otp = getWord(&argStr);
   osdg_connection_t peer;
-  int res;
+  osdg_result_t res;
 
   peer = osdg_connection_create();
   if (!peer)
@@ -437,11 +435,15 @@ static void pair_remote_peer(osdg_connection_t client, char *argStr)
   osdg_set_state_change_callback(peer, pairing_status_changed);
 
   res = osdg_pair_remote(client, peer, otp);
-  if (res)
+  if (res != osdg_no_error)
   {
       printf("Failed to start connection!\n");
       osdg_connection_destroy(peer);
       return;
+  }
+  else if (osdg_get_blocking_mode(peer))
+  {
+      osdg_connection_destroy(peer);
   }
 }
 
@@ -458,6 +460,11 @@ static void close_connection(char *argStr)
     }
 
     osdg_connection_close(peers[idx]);
+    if (osdg_get_blocking_mode(peers[idx]))
+    {
+        osdg_connection_destroy(peers[idx]);
+        peers[idx] = NULL;
+    }
 }
 
 static void set_ping_interval(osdg_connection_t client, char *argStr)
@@ -479,6 +486,20 @@ static void set_ping_interval(osdg_connection_t client, char *argStr)
         printf("Failed to set ping interval: ");
         print_result(r);
     }
+}
+
+static void set_blocking_mode(char *argStr)
+{
+    const char *arg = getWord(&argStr);
+
+    if (!strcmp(arg, "on"))
+        blockingMode = 1;
+    else if (!strcmp(arg, "off"))
+        blockingMode = 0;
+    else if (*arg)
+        printf("Invalid blocking mode argument: %s\n", arg);
+
+    printf("Blocking mode is now %s\n", blockingMode ? "on" : "off");
 }
 
 static osdg_connection_t client;
@@ -546,6 +567,7 @@ int main(int argc, const char *const *argv)
     return 255;
   }
 
+  osdg_set_blocking_mode(client, 1);
   osdg_set_state_change_callback(client, grid_status_changed);
 
   r = osdg_connect_to_danfoss(client);
@@ -574,6 +596,7 @@ int main(int argc, const char *const *argv)
                  "list pairings          - list known pairings\n"
                  "list peers             - list current connections\n"
                  "ping [interval]        - set grid ping interval in seconds\n"
+                 "blocking [on|off]      - set blocking mode\n"
                  "quit                   - end session\n");
         }
         else if (!strcmp(cmd, "connect"))
@@ -602,6 +625,10 @@ int main(int argc, const char *const *argv)
         {
             set_ping_interval(client, p);
         }
+        else if (!strcmp(cmd, "blocking"))
+        {
+            set_blocking_mode(p);
+        }
         else if (!strcmp(cmd, "quit"))
         {
           break;
@@ -618,6 +645,7 @@ int main(int argc, const char *const *argv)
   }
 
   osdg_connection_close(client);
+  osdg_connection_destroy(client);
 
   osdg_shutdown();
   return 0;

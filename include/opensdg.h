@@ -78,6 +78,8 @@ enum osdg_connection_state
   osdg_pairing_complete
 };
 
+OSDG_API void osdg_set_blocking_mode(osdg_connection_t conn, int blocking);
+OSDG_API int osdg_get_blocking_mode(osdg_connection_t conn);
 OSDG_API enum osdg_connection_state osdg_get_connection_state(osdg_connection_t conn);
 
 typedef void(*osdg_state_cb_t)(osdg_connection_t conn, enum osdg_connection_state state);
