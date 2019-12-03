@@ -171,6 +171,7 @@ void osdg_connection_destroy(osdg_connection_t client)
   }
 
   queue_destroy(&client->bufferQueue);
+  event_destroy(&client->completion);
   free(client);
 }
 
