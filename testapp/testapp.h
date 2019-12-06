@@ -2,6 +2,7 @@
 
 void hexdump(const unsigned char *data, unsigned int size);
 int add_pairing(osdg_key_t peerId, const char *description);
+int save_pairings(void);
 
 osdg_connection_t get_grid_connection(void);
 

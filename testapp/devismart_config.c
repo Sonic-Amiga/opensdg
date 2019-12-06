@@ -77,6 +77,7 @@ static int parse_config_data(const char *json, int size)
     jsmn_parser p;
     jsmntok_t t[1024];
     int r, i, j, k;
+    int added = 0;
 
     jsmn_init(&p);
     r = jsmn_parse(&p, json, size, t, sizeof(t) / sizeof(t[0]));
@@ -98,6 +99,8 @@ static int parse_config_data(const char *json, int size)
                 if (g[0].type != JSMN_OBJECT)
                 {
                     printf("JSON error: \"rooms\" value is not an object!\n");
+                    if (added)
+                        save_pairings();
                     return 1;
                 }
 
@@ -118,6 +121,7 @@ static int parse_config_data(const char *json, int size)
 
                     if (!osdg_hex_to_bin(device_id, sizeof(device_id), roomPeer, sizeof(osdg_key_t) * 2, NULL, NULL, NULL)) {
                         add_pairing(device_id, roomName);
+                        added++;
                     } else {
                         printf("Malformed room %s peer ID: %s\n", roomName, roomPeer);
                     }
@@ -130,6 +134,9 @@ static int parse_config_data(const char *json, int size)
             i += t[i + 1].size + 1;
         }
     }
+
+    if (added)
+        save_pairings();
 
     return 0;
 }

@@ -215,6 +215,11 @@ int add_pairing(osdg_key_t peerId, const char *description)
   return 0;
 }
 
+int save_pairings(void)
+{
+  return write_file(&pairings, sizeof(pairings), "osdg_test_pairings.bin");
+}
+
 static osdg_connection_t peers[MAX_PEERS];
 static unsigned int num_peers = 0;
 
