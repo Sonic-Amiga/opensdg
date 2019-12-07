@@ -32,4 +32,5 @@ else (MSVC)
 endif (MSVC)
 
 add_subdirectory(library)
+add_subdirectory(jni)
 add_subdirectory(testapp)
