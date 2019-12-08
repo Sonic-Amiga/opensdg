@@ -27,6 +27,10 @@ else (${JAVAC} STREQUAL "JAVAC-NOTFOUND")
   target_include_directories(opensdg_jni PRIVATE ${JAVA_HOME}/include ${JAVA_HOME}/include/win32 ${CMAKE_CURRENT_BINARY_DIR})
   target_link_libraries(opensdg_jni PUBLIC opensdg)
 
+  # javac has also created .class files, so let's build a JAR too
+  add_custom_target(opensdg_jar jar -cvf ${JAVA_DIR}/OpenSDG.jar ${JAVA_DIR}/target/classes)
+  add_dependencies(opensdg_jni opensdg_jar)
+
   if (MSVC AND STATIC_BUILD)
     # Unfortunately we don't have .pdb for static libsodium'
     target_link_options(opensdg_jni PRIVATE "/ignore:4099")
