@@ -1,6 +1,30 @@
 #include "org_opensdg_OpenSDG.h"
 #include "opensdg.h"
 
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+    return JNI_VERSION_1_4;
+}
+
+static int initialized = 0;
+
+JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved)
+{
+    if (!initialized)
+        return;
+
+    osdg_shutdown();
+    initialized = 0;
+}
+
+JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_init(JNIEnv *env, jclass cl)
+{
+    osdg_result_t res = osdg_init();
+
+    initialized = (res == osdg_no_error);
+    return res;
+}
+
 static jbyte *getNativeKey(JNIEnv *env, jbyteArray key)
 {
     if ((*env)->GetArrayLength(env, key) != sizeof(osdg_key_t))

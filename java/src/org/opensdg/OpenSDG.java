@@ -3,6 +3,10 @@ package org.opensdg;
 public class OpenSDG {
     static {
         System.loadLibrary("opensdg_jni");
+        int res = init();
+        if (res != 0) {
+            throw new ExceptionInInitializerError("opensdg library initialization failed");
+        }
     }
 
     public static native void SetPrivateKey(byte[] key);
@@ -10,6 +14,8 @@ public class OpenSDG {
     public static native byte[] GetMyPeerId();
 
     public static native byte[] CreatePrivateKey();
+
+    private static native int init();
 
     native static long connection_create(OSDGConnection osdgConnection);
 
