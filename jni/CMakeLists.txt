@@ -28,8 +28,8 @@ else (${JAVAC} STREQUAL "JAVAC-NOTFOUND")
   target_link_libraries(opensdg_jni PUBLIC opensdg)
 
   # javac has also created .class files, so let's build a JAR too
-  add_custom_target(opensdg_jar jar -cvf ${JAVA_DIR}/OpenSDG.jar ${JAVA_DIR}/target/classes)
-  add_dependencies(opensdg_jni opensdg_jar)
+  add_custom_target(opensdg_jar ALL jar -cvf ${JAVA_DIR}/OpenSDG.jar org WORKING_DIRECTORY ${JAVA_DIR}/target/classes)
+  add_dependencies(opensdg_jar opensdg_jni)
 
   if (MSVC AND STATIC_BUILD)
     # Unfortunately we don't have .pdb for static libsodium'
