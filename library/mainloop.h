@@ -23,4 +23,18 @@ int mainloop_add_connection(struct _osdg_connection *conn);
 void mainloop_remove_connection(struct _osdg_connection *conn);
 int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount);
 
+const struct osdg_main_loop_callbacks *main_cb;
+
+static inline void main_loop_start_cb(void)
+{
+    if (main_cb)
+        main_cb->mainloop_start();
+}
+
+static inline void main_loop_stop_cb(void)
+{
+    if (main_cb)
+        main_cb->mainloop_stop();
+}
+
 #endif

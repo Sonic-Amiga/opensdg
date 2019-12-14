@@ -1,8 +1,12 @@
 #include "org_opensdg_OpenSDG.h"
 #include "opensdg.h"
 
+static JavaVM *jvm;
+static JNIEnv *main_env;
+
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
+    jvm = vm;
     return JNI_VERSION_1_4;
 }
 
@@ -17,10 +21,28 @@ JNIEXPORT void JNI_OnUnload(JavaVM *vm, void *reserved)
     initialized = 0;
 }
 
+static void jni_attach(void)
+{
+    (*jvm)->AttachCurrentThread(jvm, (void **)&main_env, NULL);
+}
+
+static void jni_detach(void)
+{
+    (*jvm)->DetachCurrentThread(jvm);
+}
+
+static const struct osdg_main_loop_callbacks jni_mainloop_cb =
+{
+    jni_attach,
+    jni_detach
+};
+
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_init(JNIEnv *env, jclass cl)
 {
-    osdg_result_t res = osdg_init();
-
+    osdg_result_t res;
+    
+    osdg_set_mainloop_callbacks(&jni_mainloop_cb);
+    res = osdg_init();
     initialized = (res == osdg_no_error);
     return res;
 }
@@ -42,12 +64,17 @@ JNIEXPORT void JNICALL Java_org_opensdg_OpenSDG_SetPrivateKey(JNIEnv *env, jclas
     (*env)->ReleaseByteArrayElements(env, key, nativeKey, 0);
 }
 
+static jbyteArray makeJavaArray(JNIEnv *env, const void *data, unsigned int len)
+{
+    jbyteArray array = (*env)->NewByteArray(env, len);
+
+    (*env)->SetByteArrayRegion(env, array, 0, len, data);
+    return array;
+}
+
 static jbyteArray makeJavaKey(JNIEnv *env, const osdg_key_t nativeKey)
 {
-    jbyteArray key = (*env)->NewByteArray(env, sizeof(osdg_key_t));
-
-    (*env)->SetByteArrayRegion(env, key, 0, sizeof(osdg_key_t), nativeKey);
-    return key;
+    return makeJavaArray(env, nativeKey, sizeof(osdg_key_t));
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_GetMyPeerId(JNIEnv *env, jclass cl)
@@ -63,12 +90,35 @@ JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_CreatePrivateKey(JNIEnv *e
     return makeJavaKey(env, nativeKey);
 }
 
+static void connection_state_change(osdg_connection_t conn, enum osdg_connection_state state)
+{
+    jobject obj = osdg_get_user_data(conn);
+    jclass cl = (*main_env)->GetObjectClass(main_env, obj);
+    jmethodID mid = (*main_env)->GetMethodID(main_env, cl, "osdg_status_change_cb", "(I)V");
+
+    (*main_env)->CallVoidMethod(main_env, obj, mid, state);
+}
+
+static osdg_result_t connection_receive_data(osdg_connection_t conn, const void *data, unsigned int len)
+{
+    jobject obj = osdg_get_user_data(conn);
+    jclass cl = (*main_env)->GetObjectClass(main_env, obj);
+    jmethodID mid = (*main_env)->GetMethodID(main_env, cl, "osdg_data_receive_cb", "([B)I");
+    jbyteArray jData = makeJavaArray(main_env, data, len);
+
+    return (*main_env)->CallIntMethod(main_env, obj, mid, jData);
+}
+
 JNIEXPORT jlong JNICALL Java_org_opensdg_OpenSDG_connection_1create(JNIEnv *env, jclass cl, jobject jConn)
 {
     osdg_connection_t conn = osdg_connection_create();
 
     if (conn)
+    {
         osdg_set_user_data(conn, (void *)jConn);
+        osdg_set_state_change_callback(conn, connection_state_change);
+        osdg_set_receive_data_callback(conn, connection_receive_data);
+    }
 
     return (jlong)conn;
 }

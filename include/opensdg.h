@@ -105,6 +105,14 @@ OSDG_API void osdg_shutdown(void);
 
 OSDG_API void osdg_set_log_mask(unsigned int mask);
 
+struct osdg_main_loop_callbacks
+{
+    void (*mainloop_start)(void);
+    void (*mainloop_stop)(void);
+};
+
+OSDG_API void osdg_set_mainloop_callbacks(const struct osdg_main_loop_callbacks *cb);
+
 OSDG_API void osdg_bin_to_hex(char *hex, size_t hex_size, const unsigned char *bin, size_t bin_size);
 OSDG_API int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsigned char *hex, size_t hex_size,
                              const char *ignore, size_t *bin_size, const char **end_ptr);

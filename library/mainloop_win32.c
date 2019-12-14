@@ -77,6 +77,8 @@ static DWORD WINAPI osdg_main(void *arg)
 {
     DWORD timeout = WSA_INFINITE;
 
+    main_loop_start_cb();
+
     for (;;)
     {
         DWORD r = WSAWaitForMultipleEvents(num_connections + 1, events, FALSE, timeout, FALSE);
@@ -112,6 +114,7 @@ static DWORD WINAPI osdg_main(void *arg)
         }
     }
 
+    main_loop_stop_cb();
     return 0;
 }
 

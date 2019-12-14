@@ -65,6 +65,7 @@ int mainloop_add_connection(struct _osdg_connection *conn)
 static void *osdg_main(void *arg)
 {
     int timeout = -1;
+    main_loop_start_cb();
 
     for (;;)
     {
@@ -111,10 +112,9 @@ static void *osdg_main(void *arg)
         {
             return NULL; /* OS error code will be set */
         }
-
-        if ()
     }
 
+    main_loop_stop_cb();
     return NULL;
 }
 

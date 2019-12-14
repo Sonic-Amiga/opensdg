@@ -2,6 +2,13 @@
 #include "mainloop.h"
 #include "utils.h"
 
+const struct osdg_main_loop_callbacks *main_cb = NULL;
+
+void osdg_set_mainloop_callbacks(const struct osdg_main_loop_callbacks *cb)
+{
+    main_cb = cb;
+}
+
 static struct queue requests;
 
 void mainloop_events_init(void)
