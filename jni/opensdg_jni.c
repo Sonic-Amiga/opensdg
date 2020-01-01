@@ -90,6 +90,15 @@ JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_CreatePrivateKey(JNIEnv *e
     return makeJavaKey(env, nativeKey);
 }
 
+JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_CalcPublicKey(JNIEnv *env, jclass cl, jbyteArray privateKey)
+{
+    jbyte *nativePrivkey = getNativeKey(env, privateKey);
+    osdg_key_t nativePubkey;
+
+    osdg_calc_public_key(nativePubkey, nativePrivkey);
+    return makeJavaKey(env, nativePubkey);
+}
+
 static jmethodID GetObjectMethodID(JNIEnv *env, jobject obj, const char *name, const char *signature)
 {
     jclass cl = (*env)->GetObjectClass(env, obj);

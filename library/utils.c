@@ -64,6 +64,11 @@ void osdg_create_private_key(osdg_key_t key)
     randombytes(key, crypto_box_SECRETKEYBYTES);
 }
 
+void osdg_calc_public_key(osdg_key_t pubKey, const osdg_key_t secret)
+{
+    crypto_scalarmult_base(pubKey, secret);
+}
+
 void osdg_bin_to_hex(char *hex, size_t hex_size, const unsigned char *bin, size_t bin_size)
 {
     sodium_bin2hex(hex, hex_size, bin, bin_size);

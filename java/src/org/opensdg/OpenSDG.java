@@ -15,6 +15,8 @@ public class OpenSDG {
 
     public static native byte[] CreatePrivateKey();
 
+    public static native byte[] CalcPublicKey(byte[] privateKey);
+
     private static native int init();
 
     native static long connection_create(OSDGConnection osdgConnection);
