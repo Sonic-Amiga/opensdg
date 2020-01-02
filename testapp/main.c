@@ -452,17 +452,27 @@ static void pair_remote_peer(osdg_connection_t client, char *argStr)
   }
 }
 
-static void close_connection(char *argStr)
+static int getConnectionIdx(char **argStr)
 {
-    const char *arg = getWord(&argStr);
+    const char *arg = getWord(argStr);
     char *end;
     unsigned int idx = strtoul(arg, &end, 10);
 
     if (arg == end || idx >= num_peers || peers[idx] == NULL)
     {
         printf("Invalid peer index %s!\n", arg);
-        return;
+        return -1;
     }
+
+    return idx;
+}
+
+static void close_connection(char *argStr)
+{
+    int idx = getConnectionIdx(&argStr);
+
+    if (idx == -1)
+        return;
 
     osdg_connection_close(peers[idx]);
     if (osdg_get_blocking_mode(peers[idx]))
@@ -470,6 +480,19 @@ static void close_connection(char *argStr)
         osdg_connection_destroy(peers[idx]);
         peers[idx] = NULL;
     }
+}
+
+static void send_data(char *argStr)
+{
+    int idx = getConnectionIdx(&argStr);
+
+    if (idx == -1)
+        return;
+
+    osdg_result_t res = devismart_send(peers[idx], argStr);
+
+    if (res != osdg_no_error)
+        print_result(res);
 }
 
 static void set_ping_interval(osdg_connection_t client, char *argStr)
@@ -596,16 +619,17 @@ int main(int argc, const char *const *argv)
 
         if (!strcmp(cmd, "help"))
         {
-          printf("help                   - this help\n"
-                 "close [connection #]   - close a connection\n"
-                 "connect [peer # or ID] - connect to peer by index or raw ID\n"
-                 "list pairings          - list known pairings\n"
-                 "list peers             - list current connections\n"
-                 "pair [OTP]             - pair with the given OTP\n"
-                 "ping [interval]        - set grid ping interval in seconds\n"
-                 "blocking [on|off]      - set blocking mode\n"
-                 "quit                   - end session\n"
-                 "whoami                 - print own peer information\n");
+          printf("help                       - this help\n"
+                 "close [connection #]       - close a connection\n"
+                 "connect [peer # or ID]     - connect to peer by index or raw ID\n"
+                 "list pairings              - list known pairings\n"
+                 "list peers                 - list current connections\n"
+                 "pair [OTP]                 - pair with the given OTP\n"
+                 "ping [interval]            - set grid ping interval in seconds\n"
+                 "send [connection #] [data] - send data to a peer\n"
+                 "blocking [on|off]          - set blocking mode\n"
+                 "quit                       - end session\n"
+                 "whoami                     - print own peer information\n");
         }
         else if (!strcmp(cmd, "connect"))
         {
@@ -632,6 +656,10 @@ int main(int argc, const char *const *argv)
         else if (!strcmp(cmd, "ping"))
         {
             set_ping_interval(client, p);
+        }
+        else if (!strcmp(cmd, "send"))
+        {
+            send_data(p);
         }
         else if (!strcmp(cmd, "blocking"))
         {
