@@ -29,6 +29,27 @@ struct SendMsgHeader
   unsigned char    payload[0]; /* Payload starts here */
 };
 
+struct DateTime
+{
+    unsigned char sec;       /* Second */
+    unsigned char min;       /* Minute */
+    unsigned char hour:6;    /* Hour in 24h notation */
+    unsigned char unknown:2; /* DeviSmart app always strips these away; perhaps some legacy */
+    unsigned char day:5;     /* Day of month */
+    unsigned char dow:3;     /* Day of week. Enumeration starts from 1 which corresponds to Monday */
+    unsigned char month;     /* Month. Starts from 1 which corresponds to January */
+    unsigned char year;      /* Year. Starts from 2000. */
+};
+
+struct AwayInterval
+{
+    unsigned char   size;       /* sizeof(struct AwayInterval) - 1 */
+    unsigned char   startValid; /* Start time is valid */
+    struct DateTime start;      /* Start time */
+    unsigned char   endValid;   /* End time is valid */
+    struct DateTime end;        /* End time */
+};
+
 #pragma pack()
 
 /*
@@ -222,8 +243,8 @@ enum MsgCode
   SYSTEM_RUNTIME_INFO_RELAY_ON_TIME = 29233,
   SYSTEM_RUNTIME_INFO_SYSTEM_RUNTIME = 29234,
   SYSTEM_RUNTIME_INFO_SYSTEM_RESETS = 29235,
-  SYSTEM_TIME_ISVALID                          = 29236, /* 1   Boolean ?   Self-descriptive. Reads 1 = true on my device. */
-  SYSTEM_TIME                                  = 29237,
+  SYSTEM_TIME_ISVALID                          = 29236, /* 1   Boolean     System clock has been set */
+  SYSTEM_TIME                                  = 29237, /* 6   DateTime    Current system time */
   SYSTEM_TIME_OFFSET                           = 29238, /* 2   uint16_t    GMT offset in minutes */
   SYSTEM_WIZARD_INFO = 29239,
   SYSTEM_HEATING_INFO = 29240,
@@ -253,44 +274,44 @@ enum MsgCode
   NVM_RUNTIME_STATS = 29264,
   NVM_HOME_EARLY = 29265,
   NVM_CREDENTIALS = 29266,
-  NVM_DEFAULT_HEATCONTROLLER_INTEGRATORS = 29267,
-  SYSTEM_UI_SAFETY_LOCK = 29268,
-  NVM_CONSUMPTION_HISTORY = 29269,
+  NVM_DEFAULT_HEATCONTROLLER_INTEGRATORS       = 29267,
+  SYSTEM_UI_SAFETY_LOCK                        = 29268,
+  NVM_CONSUMPTION_HISTORY                      = 29269,
   NVM_POWER_CONSUMPTION_HISTORY_LAST_SAVED_DAY = 29270,
-  SYSTEM_MDG_CONNECT_PROGRESS = 29271,
-  SYSTEM_MDG_CONNECT_PROGRESS_MAX = 29272,
-  SYSTEM_MDG_CONNECT_ERROR = 29273,
-  SYSTEM_MDG_LOG_UNTIL = 29274,
-  NVM_SYSTEM_PEAK_GRADIENT = 29275,
+  SYSTEM_MDG_CONNECT_PROGRESS                  = 29271,
+  SYSTEM_MDG_CONNECT_PROGRESS_MAX              = 29272,
+  SYSTEM_MDG_CONNECT_ERROR                     = 29273,
+  SYSTEM_MDG_LOG_UNTIL                         = 29274,
+  NVM_SYSTEM_PEAK_GRADIENT                     = 29275,
   /* Class DOMINION_HEATING */
-  HEATING_TEMPERATURE_TOP                      = 29296, /* 2   Decimal     */
-  HEATING_TEMPERATURE_BOTTOM                   = 29297, /* 2   Decimal     */
-  HEATING_TEMPERATURE_FLOOR                    = 29298, /* 2   Decimal     */
-  HEATING_TEMPERATURE_ROOM                     = 29299, /* 2   Decimal     */
-  HEATING_LOW_TEMPERATURE_WARNING              = 29300, /* 2   Decimal     */
-  HEATING_LOW_TEMPERATURE_WARNING_THRESHOLD    = 29301, /* 2   Decimal     */
+  HEATING_TEMPERATURE_TOP                      = 29296, /* 2   Decimal     Unknown */
+  HEATING_TEMPERATURE_BOTTOM                   = 29297, /* 2   Decimal     Unknown */
+  HEATING_TEMPERATURE_FLOOR                    = 29298, /* 2   Decimal     Current floor temperature reading */
+  HEATING_TEMPERATURE_ROOM                     = 29299, /* 2   Decimal     Current room temperature reading */
+  HEATING_LOW_TEMPERATURE_WARNING              = 29300, /* 2   Decimal     Setting for "Low temperature" warning */
+  HEATING_LOW_TEMPERATURE_WARNING_THRESHOLD    = 29301, /* 2   Decimal     Unknown */
   /* Class DOMINION_SCHEDULER */
-  SCHEDULER_CONTROL_INFO = 29328,
-  SCHEDULER_CONTROL_MODE = 29329,
-  SCHEDULER_SETPOINT_COMFORT                   = 29330, /* 2   Decimal     */
-  SCHEDULER_SETPOINT_ECONOMY                   = 29331, /* 2   Decimal     */
-  SCHEDULER_SETPOINT_MANUAL                    = 29332, /* 2   Decimal     */
-  SCHEDULER_SETPOINT_AWAY                      = 29333, /* 2   Decimal     */
-  SCHEDULER_SETPOINT_FROST_PROTECTION          = 29334, /* 2   Decimal     */
-  SCHEDULER_SETPOINT_FLOOR_COMFORT             = 29335, /* 2   Decimal     */
+  SCHEDULER_CONTROL_INFO                       = 29328, /* 1   uint8_t     */
+  SCHEDULER_CONTROL_MODE                       = 29329, /* 1   uint8_t     */
+  SCHEDULER_SETPOINT_COMFORT                   = 29330, /* 2   Decimal     Temperature setting for at home period */
+  SCHEDULER_SETPOINT_ECONOMY                   = 29331, /* 2   Decimal     Temperature setting for away/asleep period */
+  SCHEDULER_SETPOINT_MANUAL                    = 29332, /* 2   Decimal     Manual mode temperature setting */
+  SCHEDULER_SETPOINT_AWAY                      = 29333, /* 2   Decimal     Vacation mode temperature setting */
+  SCHEDULER_SETPOINT_FROST_PROTECTION          = 29334, /* 2   Decimal     Frost protection mode temperature setting */
+  SCHEDULER_SETPOINT_FLOOR_COMFORT             = 29335, /* 2   Decimal     Minimum floor temperature to keep */
   SCHEDULER_SETPOINT_FLOOR_COMFORT_ENABLED     = 29336, /* 1   Boolean     Enable keeping minimum floor temperature */
-  SCHEDULER_SETPOINT_MAX_FLOOR                 = 29337, /* 2   Decimal     */
+  SCHEDULER_SETPOINT_MAX_FLOOR                 = 29337, /* 2   Decimal     Maximum allowed floor temperature */
   SCHEDULER_SETPOINT_TEMPORARY                 = 29338, /* 2   Decimal     */
-  SCHEDULER_AWAY_ISPLANNED = 29339,
-  SCHEDULER_AWAY = 29340,
-  SCHEDULER_WEEK = 29341,
-  SCHEDULER_WEEK_2 = 29342,
+  SCHEDULER_AWAY_ISPLANNED                     = 29339, /* 1   Boolean     Whether away interval is active or not */
+  SCHEDULER_AWAY                               = 29340, /* 14  AwayInterval Currently programmed away interval */
+  SCHEDULER_WEEK                               = 29341,
+  SCHEDULER_WEEK_2                             = 29342,
   /* Class DOMINION_LOGS */
-  LOG_RESET = 29376,
-  LOG_ENERGY_CONSUMPTION_TOTAL = 29377,
-  LOG_ENERGY_CONSUMPTION_30DAYS = 29378,
-  LOG_ENERGY_CONSUMPTION_7DAYS = 29379,
-  LOG_LATEST_ACTIVITIES = 29380
+  LOG_RESET                                    = 29376,
+  LOG_ENERGY_CONSUMPTION_TOTAL                 = 29377,
+  LOG_ENERGY_CONSUMPTION_30DAYS                = 29378,
+  LOG_ENERGY_CONSUMPTION_7DAYS                 = 29379,
+  LOG_LATEST_ACTIVITIES                        = 29380
 };
 
 struct Version
@@ -303,7 +324,5 @@ static inline float ReadDecimal(const unsigned char *payload)
 {
     return (float)(payload[0] + ((unsigned int)payload[1] << 8)) / 100;
 }
-
-/* TODO: Describe format of datestamps and interpretation of temperature values */
 
 #endif

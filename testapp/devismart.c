@@ -716,12 +716,36 @@ int findCode(const char *str)
     return -1;
 }
 
+static const char *dow[] =
+{
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+    "Sun"
+};
+
+static void printDateTime(struct DateTime *dt)
+{
+    const char *dowStr;
+
+    if (dt->dow >= 1 && dt->dow <= 7)
+        dowStr = dow[dt->dow - 1];
+    else
+        dowStr = "???";
+
+    printf("%s %d.%d.%d %02d:%02d:%02d UTC", dowStr, dt->day, dt->month, dt->year + 2000, dt->hour, dt->min, dt->sec);
+}
+
 static int handle_single_packet(const uint8_t *data, uint32_t size)
 { 
   const struct MsgHeader *header = (const struct MsgHeader *)data;
   unsigned int packetSize = header->dataSize + sizeof(struct MsgHeader);
   const char *cmd;
   const uint8_t *payload = data + sizeof(struct MsgHeader);
+  struct AwayInterval *away;
   
   if (packetSize > size)
 	return -1;
@@ -731,11 +755,18 @@ static int handle_single_packet(const uint8_t *data, uint32_t size)
   switch (header->msgCode)
   {
   case NVM_RUNTIME_STATS:
-  case SYSTEM_TIME:
   case SYSTEM_TIME_ISVALID:
-    // These are sent every second. At the moment we aren't interested in them,
-	// so prevent unstoppable console flood.
+    /* These are sent every second. At the moment we aren't interested in them,
+       so prevent unstoppable console flood. */
     break;
+
+  case SYSTEM_TIME:
+      break; /* Console flood; comment this line out to see ticks */
+  case GLOBAL_PRODUCTIONDATE:
+      printf("%s ", cmd);
+      printDateTime((struct DateTime *)payload);
+      putchar('\n');
+      break;
 
   case WIFI_SSID_AP:
   case WIFI_CONNECTED_SSID:
@@ -812,6 +843,24 @@ static int handle_single_packet(const uint8_t *data, uint32_t size)
     // Payload is 16-bit fixed point decimal
     printf("%s %.2f\n", cmd, ReadDecimal(payload));
     break;
+
+  case SCHEDULER_AWAY:
+    away = (struct AwayInterval *)payload;
+    if (away->size == sizeof(struct AwayInterval) - 1)
+    {
+      printf("%s ", cmd);
+      if (away->startValid)
+        printDateTime(&away->start);
+      else
+        printf("N/A");
+      printf(" - ");
+      if (away->endValid)
+        printDateTime(&away->end);
+      else
+        printf("N/A");
+      putchar('\n');
+      break;
+    }
 
   default:
     // We don't know (yet) how to handle it, just dump
