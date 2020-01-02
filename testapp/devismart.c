@@ -334,6 +334,25 @@ static int handle_single_packet(const uint8_t *data, uint32_t size)
     dump_data(&payload[1], payload[0]);
     break;
 
+  case TESTANDPRODUCTION_UNCOMPENSATED_ROOM:
+  case HEATING_TEMPERATURE_TOP:
+  case HEATING_TEMPERATURE_BOTTOM:
+  case HEATING_TEMPERATURE_FLOOR:
+  case HEATING_TEMPERATURE_ROOM:
+  case HEATING_LOW_TEMPERATURE_WARNING:
+  case HEATING_LOW_TEMPERATURE_WARNING_THRESHOLD:
+  case SCHEDULER_SETPOINT_COMFORT:
+  case SCHEDULER_SETPOINT_ECONOMY:
+  case SCHEDULER_SETPOINT_MANUAL:
+  case SCHEDULER_SETPOINT_AWAY:
+  case SCHEDULER_SETPOINT_FROST_PROTECTION:
+  case SCHEDULER_SETPOINT_FLOOR_COMFORT:
+  case SCHEDULER_SETPOINT_MAX_FLOOR:
+  case SCHEDULER_SETPOINT_TEMPORARY:
+    // Payload is 16-bit fixed point decimal
+    printf("%s %.2f\n", cmd, ReadDecimal(payload));
+    break;
+
   default:
     // We don't know (yet) how to handle it, just dump
     if (cmd)
