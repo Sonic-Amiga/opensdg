@@ -597,9 +597,11 @@ int main(int argc, const char *const *argv)
         if (!strcmp(cmd, "help"))
         {
           printf("help                   - this help\n"
+                 "close [connection #]   - close a connection\n"
                  "connect [peer # or ID] - connect to peer by index or raw ID\n"
                  "list pairings          - list known pairings\n"
                  "list peers             - list current connections\n"
+                 "pair [OTP]             - pair with the given OTP\n"
                  "ping [interval]        - set grid ping interval in seconds\n"
                  "blocking [on|off]      - set blocking mode\n"
                  "quit                   - end session\n");
