@@ -871,9 +871,8 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
 {
     const char *cmdStr = getWord(&argStr);
     int msgCode = findCode(cmdStr);
-    unsigned char packet[sizeof(struct MsgHeader) + 255]; /* Payload size is one byte, so maximum of 255 */
-    struct MsgHeader *header = (struct MsgHeader *)packet;
-    unsigned char *payload = &packet[sizeof(struct MsgHeader)];
+    unsigned char buffer[sizeof(struct SendMsgHeader) + 255]; /* Payload size is one byte, so maximum of 255 */
+    struct SendMsgHeader *packet = (struct SendMsgHeader *)&buffer;
     unsigned long payloadVal;
 
     if (msgCode == -1)
@@ -882,14 +881,17 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
         return osdg_no_error;
     }
 
-    header->msgClass = findClass(msgCode);
-    header->msgCode = msgCode;
+    packet->noPayload = 0;
+    packet->header.msgClass = findClass(msgCode);
+    packet->header.msgCode = msgCode;
 
     switch (msgCode)
     {
     case WIFI_UPDATE_CONNECTED_STRENGTH:
-        header->dataSize = 1;
+        packet->header.dataSize = 1;
         break;
+
+    /* This code is severely incomplete as it was used only for testing */
 
     default:
         printf("Unsupported message code %s\n", cmdStr);
@@ -898,18 +900,18 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
 
     payloadVal = strtoul(getWord(&argStr), NULL, 0);
 
-    switch (header->dataSize)
+    switch (packet->header.dataSize)
     {
     case 1:
-        *payload = (unsigned char)payloadVal;
+        *packet->payload = (unsigned char)payloadVal;
         break;
     case 2:
-        *((unsigned short *)payload) = (unsigned short)payloadVal;
+        *((unsigned short *)packet->payload) = (unsigned short)payloadVal;
         break;
     case 4:
-        *((unsigned int *)payload) = payloadVal;
+        *((unsigned int *)packet->payload) = payloadVal;
         break;
     }
 
-    return osdg_send_data(conn, packet, sizeof(struct MsgHeader) + header->dataSize);
+    return osdg_send_data(conn, packet, sizeof(struct SendMsgHeader) + packet->header.dataSize);
 }

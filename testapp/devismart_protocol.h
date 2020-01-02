@@ -11,14 +11,24 @@
  * Constant names are shamelessly ripped from DEVISmart APK. Thanks Java for cooperation! :)
  */
 
-/* Every message starts with this header */
 #pragma pack(1)
+
+/* Every message starts with this header */
 struct MsgHeader
 {
-  unsigned char  msgClass; // Message class, see below
-  unsigned short msgCode;  // Message code, see below
-  unsigned char  dataSize; // Payload size, does not include header itself
+  unsigned char  msgClass; /* Message class, see below */
+  unsigned short msgCode;  /* Message code, see below */
+  unsigned char  dataSize; /* Payload size, does not include header itself */
 };
+
+/* Outgoing packets also need one prefix byte */
+struct SendMsgHeader
+{
+  unsigned char    noPayload;  /* 1 if payload size == 0, otherwise 0 */
+  struct MsgHeader header;     /* Packet header */
+  unsigned char    payload[0]; /* Payload starts here */
+};
+
 #pragma pack()
 
 /*
