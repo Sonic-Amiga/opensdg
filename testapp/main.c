@@ -604,7 +604,8 @@ int main(int argc, const char *const *argv)
                  "pair [OTP]             - pair with the given OTP\n"
                  "ping [interval]        - set grid ping interval in seconds\n"
                  "blocking [on|off]      - set blocking mode\n"
-                 "quit                   - end session\n");
+                 "quit                   - end session\n"
+                 "whoami                 - print own peer information\n");
         }
         else if (!strcmp(cmd, "connect"))
         {
@@ -639,6 +640,14 @@ int main(int argc, const char *const *argv)
         else if (!strcmp(cmd, "quit"))
         {
           break;
+        }
+        else if (!strcmp(cmd, "whoami"))
+        {
+            printf("Private key: ");
+            hexdump(clientKey, sizeof(osdg_key_t));
+            printf("\nPeer ID    : ");
+            hexdump(osdg_get_my_peer_id(), sizeof(osdg_key_t));
+            putchar('\n');
         }
         else
         {
