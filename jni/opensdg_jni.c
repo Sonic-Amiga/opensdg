@@ -55,12 +55,11 @@ static jbyte *getNativeKey(JNIEnv *env, jbyteArray key)
     return (*env)->GetByteArrayElements(env, key, NULL);
 }
 
-JNIEXPORT void JNICALL Java_org_opensdg_OpenSDG_SetPrivateKey(JNIEnv *env, jclass cl, jbyteArray key)
+JNIEXPORT void JNICALL Java_org_opensdg_OpenSDG_set_1private_1key(JNIEnv *env, jclass cl, jlong conn, jbyteArray key)
 {
     jbyte *nativeKey = getNativeKey(env, key);
     
-    // FIXME : Handle parameter error
-    osdg_set_private_key(nativeKey);
+    osdg_set_private_key((osdg_connection_t)conn, nativeKey);
     (*env)->ReleaseByteArrayElements(env, key, nativeKey, 0);
 }
 
@@ -77,9 +76,9 @@ static jbyteArray makeJavaKey(JNIEnv *env, const osdg_key_t nativeKey)
     return makeJavaArray(env, nativeKey, sizeof(osdg_key_t));
 }
 
-JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_GetMyPeerId(JNIEnv *env, jclass cl)
+JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_get_1my_1peer_1id(JNIEnv *env, jclass cl, jlong conn)
 {
-    return makeJavaKey(env, osdg_get_my_peer_id());
+    return makeJavaKey(env, osdg_get_my_peer_id((osdg_connection_t)conn));
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_CreatePrivateKey(JNIEnv *env, jclass cl)

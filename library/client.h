@@ -35,6 +35,8 @@ struct _osdg_connection
   osdg_state_cb_t            changeState;
   osdg_receive_cb_t          receiveData;
   void                      *userData;
+  unsigned char              clientPubkey[crypto_box_PUBLICKEYBYTES];     /* Client's public key */
+  unsigned char              clientSecret[crypto_box_SECRETKEYBYTES];     /* Client's private key */
   unsigned char              serverPubkey[crypto_box_PUBLICKEYBYTES];     /* Server's public key */
   unsigned char              clientTempPubkey[crypto_box_PUBLICKEYBYTES]; /* Client's short term key pair */
   unsigned char              clientTempSecret[crypto_box_SECRETKEYBYTES];
@@ -62,10 +64,6 @@ struct _osdg_connection
   unsigned int               pingDelay;         /* Last PING roundtrip time */
   unsigned long long         lastPing;          /* When the last PING has been sent */
 };
-
-/* Client's long term key pair, global */
-extern unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
-extern unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
 
 int connection_allocate_buffers(struct _osdg_connection *conn);
 void *client_get_buffer(struct _osdg_connection *conn);

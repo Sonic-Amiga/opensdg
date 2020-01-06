@@ -7,20 +7,16 @@
 #include "mainloop.h"
 #include "socket.h"
 
-/* Our key pair */
-unsigned char clientPubkey[crypto_box_PUBLICKEYBYTES];
-unsigned char clientSecret[crypto_box_SECRETKEYBYTES];
-
-void osdg_set_private_key(const osdg_key_t private_key)
+void osdg_set_private_key(osdg_connection_t conn, const osdg_key_t private_key)
 {
-    memcpy(clientSecret, private_key, sizeof(clientSecret));
+    memcpy(conn->clientSecret, private_key, sizeof(conn->clientSecret));
     /* Compute the public key */
-    crypto_scalarmult_base(clientPubkey, clientSecret);
+    crypto_scalarmult_base(conn->clientPubkey, conn->clientSecret);
 }
 
-unsigned char *osdg_get_my_peer_id(void)
+unsigned char *osdg_get_my_peer_id(osdg_connection_t conn)
 {
-  return clientPubkey;
+  return conn->clientPubkey;
 }
 
 static inline void client_put_buffer_nolock(struct _osdg_connection *client, struct osdg_buffer *buffer)

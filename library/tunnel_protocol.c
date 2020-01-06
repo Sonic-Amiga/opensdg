@@ -27,17 +27,17 @@ static osdg_result_t send_packet(struct packet_header *header, struct _osdg_conn
     return send_data((const unsigned char *)header, PACKET_SIZE(header), conn);
 }
 
-static int sendTELL(struct _osdg_connection *client)
+static int sendTELL(struct _osdg_connection *conn)
 {
     struct packet_header tell;
     osdg_result_t res;
 
-    DUMP(PROTOCOL, clientPubkey, sizeof(clientPubkey), "Using public key");
-    DUMP(PROTOCOL, clientSecret, sizeof(clientSecret), "Using private key");
+    DUMP(PROTOCOL, conn->clientPubkey, sizeof(conn->clientPubkey), "Using public key");
+    DUMP(PROTOCOL, conn->clientSecret, sizeof(conn->clientSecret), "Using private key");
 
     build_header(&tell, CMD_TELL, sizeof(tell));
-    res = send_packet(&tell, client);
-    return connection_set_result(client, res);
+    res = send_packet(&tell, conn);
+    return connection_set_result(conn, res);
 }
 
 static void *decryptMESG(struct packet_header *header, struct _osdg_connection *client, const char *nonce_prefix)
@@ -239,7 +239,7 @@ int receive_packet(struct _osdg_connection *client)
         build_random_long_term_nonce(&nonce, "CurveCPV");
         ret = crypto_box(outerData->curvecp_vouch_inner - crypto_box_BOXZEROBYTES,
                          (unsigned char *)&innerData, sizeof(innerData), nonce.data,
-                         client->serverPubkey, clientSecret);
+                         client->serverPubkey, client->clientSecret);
         if (ret)
         {
             client_put_buffer(client, voch);
@@ -249,7 +249,7 @@ int receive_packet(struct _osdg_connection *client)
 
         /* Now compose the outer data */
         zero_pad(outerData->outerPad);
-        memcpy(outerData->clientPubkey, clientPubkey, sizeof(outerData->clientPubkey));
+        memcpy(outerData->clientPubkey, client->clientPubkey, sizeof(outerData->clientPubkey));
         outerData->nonce[0] = nonce.value[1];
         outerData->nonce[1] = nonce.value[2];
 

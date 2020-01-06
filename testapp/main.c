@@ -586,8 +586,6 @@ int main(int argc, const char *const *argv)
   if (i)
     pairings.count = 0;
 
-  osdg_set_private_key(clientKey);
-
   client = osdg_connection_create();
   if (!client)
   {
@@ -597,6 +595,7 @@ int main(int argc, const char *const *argv)
 
   osdg_set_blocking_mode(client, 1);
   osdg_set_state_change_callback(client, grid_status_changed);
+  osdg_set_private_key(client, clientKey);
 
   r = osdg_connect_to_danfoss(client);
   if (r == 0)
@@ -674,7 +673,7 @@ int main(int argc, const char *const *argv)
             printf("Private key: ");
             hexdump(clientKey, sizeof(osdg_key_t));
             printf("\nPeer ID    : ");
-            hexdump(osdg_get_my_peer_id(), sizeof(osdg_key_t));
+            hexdump(osdg_get_my_peer_id(client), sizeof(osdg_key_t));
             putchar('\n');
         }
         else

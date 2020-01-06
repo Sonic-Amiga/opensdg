@@ -44,7 +44,7 @@ static int devismart_request_configuration(osdg_connection_t connection)
   
   printf("Requesting DEVISmart config on connection %p\n", connection);
 
-  osdg_bin_to_hex(hexed, sizeof(hexed), osdg_get_my_peer_id(), sizeof(osdg_key_t));
+  osdg_bin_to_hex(hexed, sizeof(hexed), osdg_get_my_peer_id(connection), sizeof(osdg_key_t));
   /*
    * If chunkedMessage parameter is set to true, the whole data will be split
    * into 512-byte long chunks and sent as separate packets; we would have

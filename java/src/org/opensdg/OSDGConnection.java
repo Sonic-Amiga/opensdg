@@ -13,6 +13,14 @@ public class OSDGConnection {
         m_Conn = 0;
     }
 
+    public void SetPrivateKey(byte[] key) {
+        OpenSDG.set_private_key(m_Conn, key);
+    }
+
+    public byte[] GetMyPeerId() {
+        return OpenSDG.get_my_peer_id(m_Conn);
+    }
+
     public OSDGResult ConnectToDanfoss() {
         return OSDGResult.fromNative(OpenSDG.connect_to_danfoss(m_Conn));
     }

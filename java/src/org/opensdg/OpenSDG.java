@@ -9,9 +9,9 @@ public class OpenSDG {
         }
     }
 
-    public static native void SetPrivateKey(byte[] key);
+    static native void set_private_key(long conn, byte[] key);
 
-    public static native byte[] GetMyPeerId();
+    static native byte[] get_my_peer_id(long conn);
 
     public static native byte[] CreatePrivateKey();
 

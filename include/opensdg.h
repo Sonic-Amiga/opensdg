@@ -44,12 +44,13 @@ typedef enum
     osdg_system_error          /* General OS-specific error */
 } osdg_result_t;
 
-OSDG_API void osdg_set_private_key(const osdg_key_t private_key);
-OSDG_API unsigned char *osdg_get_my_peer_id(void);
 OSDG_API void osdg_create_private_key(osdg_key_t key);
 OSDG_API void osdg_calc_public_key(osdg_key_t public_key, const osdg_key_t private_key);
 
 typedef struct _osdg_connection *osdg_connection_t;
+
+OSDG_API void osdg_set_private_key(osdg_connection_t conn, const osdg_key_t private_key);
+OSDG_API unsigned char *osdg_get_my_peer_id(osdg_connection_t conn);
 
 struct osdg_endpoint
 {

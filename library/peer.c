@@ -51,7 +51,9 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
   peer->mode =  mode_peer;
   peer->grid = grid;
 
-  memcpy(peer->serverPubkey, peerId, sizeof(osdg_key_t));
+  memcpy(peer->clientPubkey, grid->clientPubkey, sizeof(peer->clientPubkey));
+  memcpy(peer->clientSecret, grid->clientSecret, sizeof(peer->clientSecret));
+  memcpy(peer->serverPubkey, peerId, sizeof(peer->serverPubkey));
   strncpy(peer->protocol, protocol, sizeof(peer->protocol));
 
   /*
@@ -117,7 +119,7 @@ static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *con
 
         l = strlen(conn->protocol);
         memcpy(buf, conn->protocol, l);
-        memcpy(&buf[l], clientPubkey, crypto_box_PUBLICKEYBYTES);
+        memcpy(&buf[l], conn->clientPubkey, crypto_box_PUBLICKEYBYTES);
         memcpy(&buf[l + crypto_box_PUBLICKEYBYTES], conn->serverPubkey, crypto_box_PUBLICKEYBYTES);
         crypto_hash(buf, buf, l + crypto_box_PUBLICKEYBYTES * 2);
 
@@ -221,7 +223,10 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
     /* Terminate the OTP string */
     peer->protocol[len] = 0;
     /* Don't return garbage from osdg_get_peer_id() */
-    memset(peer->serverPubkey, 0, sizeof(peer->serverPubkey));
+    memset(peer->serverPubkey, 0, sizeof(osdg_key_t));
+
+    memcpy(peer->clientPubkey, grid->clientPubkey, sizeof(peer->clientPubkey));
+    memcpy(peer->clientSecret, grid->clientSecret, sizeof(peer->clientSecret));
 
     ret = connection_init(peer);
     if (ret)
