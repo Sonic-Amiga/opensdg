@@ -204,6 +204,9 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client,
     free((void *)randomized);
 
     if (res < 0)
+        return client->errorKind;
+
+    if (res == 0)
     {
         client->errorKind = osdg_connection_failed;
         return osdg_connection_failed;
