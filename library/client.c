@@ -55,6 +55,7 @@ osdg_connection_t osdg_connection_create(void)
   if (!client)
     return NULL;
 
+  client->req.function  = NULL;
   client->uid           = -1;
   client->sock          = -1;
   client->errorKind     = osdg_no_error;
@@ -142,13 +143,10 @@ static int connection_close(struct _osdg_connection *conn)
 
 osdg_result_t osdg_connection_close(osdg_connection_t conn)
 {
-    /* In this state another request can be in progress;
-       adding client->req to main loop's queue for the second time will screw it up
-       CHECKME: Will it be convenient or not ?
-       We specify "closing" state as completely separate flag in order to avoid race
+    /* We specify "closing" state as completely separate flag in order to avoid race
        with main thread, which could have errored out at the very same moment and
        would be setting "error" state */
-    if (conn->state == osdg_connecting || conn->closing)
+    if (conn->closing)
       return osdg_wrong_state;
 
     conn->closing  = 1;

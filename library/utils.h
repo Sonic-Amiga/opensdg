@@ -34,6 +34,18 @@ static inline void queue_put_nolock(struct queue *q, struct queue_element *e)
     q->tail = e;
 }
 
+static inline struct queue_element *queue_get_nolock(struct queue *q)
+{
+    struct queue_element *e = q->head;
+
+    if (e)
+        q->head = e->next;
+    if (q->tail == e)
+        q->tail = (struct queue_element *)&q->head;
+
+    return e;
+}
+
 void queue_put(struct queue *q, struct queue_element *e);
 void *queue_get(struct queue *q);
 
