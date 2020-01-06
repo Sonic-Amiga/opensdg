@@ -103,3 +103,40 @@ void *queue_get(struct queue *q)
 
     return e;
 }
+
+const char *osdg_get_result_str(osdg_result_t res)
+{
+    switch (res)
+    {
+    case osdg_no_error:
+        return "No error";
+    case osdg_socket_error:
+        return "Socket I/O error";
+    case osdg_crypto_core_error:
+        return "Libsodium internal error";
+    case osdg_decryption_error:
+        return "Libsodium decryption error";
+    case osdg_protocol_error:
+        return "Unrecoverable protocol error";
+    case osdg_buffer_exceeded:
+        return "Buffer overrun";
+    case osdg_invalid_parameters:
+        return "Invalid function call parameters";
+    case osdg_connection_failed:
+        return "Failed to connect to host";
+    case osdg_memory_error:
+        return "Memory allocation error";
+    case osdg_connection_refused:
+        return "Connection refused by peer";
+    case osdg_too_many_connections:
+        return "Too many connections";
+    case osdg_connection_closed:
+        return "Connection closed by peer";
+    case osdg_wrong_state:
+        return "Connection is in wrong state";
+    case osdg_system_error:
+        return "General OS error";
+    default:
+        return "Unknon result code";
+    }
+}

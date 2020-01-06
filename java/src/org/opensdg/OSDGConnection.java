@@ -61,6 +61,10 @@ public class OSDGConnection {
         return OpenSDG.get_last_errno(m_Conn);
     }
 
+    public String getLastResultStr() {
+        return OpenSDG.get_last_result_str(m_Conn);
+    }
+
     public byte[] getPeerId() {
         return OpenSDG.get_peer_id(m_Conn);
     }

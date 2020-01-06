@@ -179,6 +179,26 @@ int osdg_get_last_errno(osdg_connection_t client)
   return client->errorCode;
 }
 
+size_t osdg_get_last_result_str(osdg_connection_t conn, char *buffer, size_t len)
+{
+    const char *res = osdg_get_result_str(conn->errorKind);
+    size_t rl = strlen(res) + 1;
+
+    if (conn->errorKind == osdg_socket_error)
+    {
+        const char *err = strerror(conn->errorCode);
+
+        rl += strlen(err) + 2;
+
+        if (buffer)
+            snprintf(buffer, len, "%s: %s", res, err);
+    }
+    else if (buffer)
+        strncpy(buffer, res, len);
+
+    return rl;
+}
+
 const unsigned char *osdg_get_peer_id(osdg_connection_t conn)
 {
     return conn->serverPubkey;

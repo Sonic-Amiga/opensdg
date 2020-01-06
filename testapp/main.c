@@ -50,68 +50,15 @@ static int write_file(void *buffer, int size, const char *name)
 
 void print_result(osdg_result_t res)
 {
-    switch (res)
-    {
-    case osdg_socket_error:
-        printf("Socket I/O error\n");
-        break;
-    case osdg_crypto_core_error:
-        printf("Libsodium encryption error\n");
-        break;
-    case osdg_decryption_error:
-        printf("Libsodium decryption error\n");
-        break;
-    case osdg_protocol_error:
-        printf("Unrecoverable protocol error\n");
-        break;
-    case osdg_buffer_exceeded:
-        printf("Buffer overrun\n");
-        break;
-    case osdg_invalid_parameters:
-        printf("Invalid function call parameters\n");
-        break;
-    case osdg_connection_failed:
-        printf("Failed to connect to host\n");
-        break;
-    case osdg_memory_error:
-        printf("Memory allocation error\n");
-        break;
-    case osdg_connection_refused:
-        printf("Connection refused by peer\n");
-        break;
-    case osdg_too_many_connections:
-        printf("Too many connections\n");
-        break;
-    case osdg_connection_closed:
-        printf("Connection closed by peer\n");
-        break;
-    case osdg_wrong_state:
-        printf("Connection is in wrong state\n");
-        break;
-    case osdg_system_error:
-        printf("General OS error\n");
-        break;
-    default:
-        printf("Unknon result code %d\n", res);
-        break;
-    }
+    printf("%s\n", osdg_get_result_str(res));
 }
 
 void print_client_error(osdg_connection_t client)
 {
-  osdg_result_t result = osdg_get_last_result(client);
+  char buffer[1024];
 
-  if (result == osdg_socket_error)
-  {
-      fprintf(stderr, "Socket I/O error: %s\n", strerror(osdg_get_last_errno(client)));
-      return;
-  }
-
-  print_result(result);
-
-  /* Probably not legitimate, but good for internal diagnostics */
-  if (result == osdg_connection_failed)
-      fprintf(stderr, "Last socket error: %s\n", strerror(osdg_get_last_errno(client)));
+  osdg_get_last_result_str(client, buffer, sizeof(buffer));
+  printf("%s\n", buffer);
 }
 
 const char *getWord(char **p)

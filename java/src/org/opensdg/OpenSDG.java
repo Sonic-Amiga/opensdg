@@ -17,11 +17,15 @@ public class OpenSDG {
 
     public static native byte[] CalcPublicKey(byte[] privateKey);
 
+    private static native String get_result_str(int res);
+
     private static native int init();
 
     native static long connection_create(OSDGConnection osdgConnection);
 
     native static void connection_destroy(long conn);
+
+    native static String get_last_result_str(long conn);
 
     native static int connect_to_danfoss(long conn);
 
@@ -46,4 +50,8 @@ public class OpenSDG {
     native static byte[] get_peer_id(long conn);
 
     native static int set_ping_interval(long conn, int seconds);
+
+    public String GetResultStr(OSDGResult res) {
+        return get_result_str(res.ordinal());
+    }
 }

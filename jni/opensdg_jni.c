@@ -230,3 +230,17 @@ JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_set_1ping_1interval(JNIEnv *env,
 {
     return osdg_set_ping_interval((osdg_connection_t)conn, seconds);
 }
+
+JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1result_1str(JNIEnv *env, jclass cl, jint res)
+{
+    const char *str = osdg_get_result_str(res);
+    return (*env)->NewStringUTF(env, str);
+}
+
+JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1last_1result_1str(JNIEnv *env, jclass cl, jlong conn)
+{
+    char buffer[1024];
+
+    osdg_get_last_result_str((osdg_connection_t)conn, buffer, sizeof(buffer));
+    return (*env)->NewStringUTF(env, buffer);
+}

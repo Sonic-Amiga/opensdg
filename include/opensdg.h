@@ -119,4 +119,7 @@ OSDG_API void osdg_bin_to_hex(char *hex, size_t hex_size, const unsigned char *b
 OSDG_API int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsigned char *hex, size_t hex_size,
                              const char *ignore, size_t *bin_size, const char **end_ptr);
 
+OSDG_API size_t osdg_get_last_result_str(osdg_connection_t conn, char *buffer, size_t len);
+OSDG_API const char *osdg_get_result_str(osdg_result_t res);
+
 #endif
