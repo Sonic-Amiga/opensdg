@@ -15,32 +15,6 @@
 
 #define MAX_PEERS 32
 
-#ifdef _WIN32
-
-static void printWSAError(const char *msg, int err)
-{
-    char *str;
-
-    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, err, LANG_USER_DEFAULT, (LPSTR)&str, 1, NULL);
-    fprintf(stderr, "%s: %s\n", msg, str);
-    LocalFree(str);
-}
-
-#else
-
-static void printWSAError(const char *msg, int err)
-{
-  fprintf(stderr, "%s: %s\n", msg, strerror(err));
-}
-
-static inline int WSAGetLastError(void)
-{
-    return errno;
-}
-
-#endif
-
 static int read_file(void *buffer, int size, const char *name)
 {
     FILE *f = fopen(name, "rb");
@@ -129,14 +103,15 @@ void print_client_error(osdg_connection_t client)
 
   if (result == osdg_socket_error)
   {
-    printWSAError("Socket I/O error", osdg_get_last_errno(client));
-    return;
+      fprintf(stderr, "Socket I/O error: %s\n", strerror(osdg_get_last_errno(client)));
+      return;
   }
 
   print_result(result);
+
   /* Probably not legitimate, but good for internal diagnostics */
   if (result == osdg_connection_failed)
-    printWSAError("Last socket error", osdg_get_last_errno(client));
+      fprintf(stderr, "Last socket error: %s\n", strerror(osdg_get_last_errno(client)));
 }
 
 const char *getWord(char **p)

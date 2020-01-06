@@ -16,7 +16,56 @@ int sockerrno(void)
         return EWOULDBLOCK;
     case WSAEINTR:
         return EINTR;
-    /* TODO: Translate other errors here */
+    case WSAEINPROGRESS:
+        return EINPROGRESS;             
+    case WSAENOTSOCK:
+        return ENOTSOCK;
+    case WSAEDESTADDRREQ:
+        return EDESTADDRREQ;
+    case WSAEMSGSIZE:
+        return EMSGSIZE;
+    case WSAEPROTOTYPE:
+        return EPROTOTYPE;
+    case WSAENOPROTOOPT:
+        return ENOPROTOOPT;
+    case WSAEPROTONOSUPPORT:
+        return EPROTONOSUPPORT;
+    case WSAEOPNOTSUPP:
+        return EOPNOTSUPP;
+    case WSAEAFNOSUPPORT:
+        return EAFNOSUPPORT;
+    case WSAEADDRINUSE:
+        return EADDRINUSE;
+    case WSAEADDRNOTAVAIL:
+        return EADDRNOTAVAIL;
+    case WSAENETDOWN:
+        return ENETDOWN;
+    case WSAENETUNREACH:
+        return ENETUNREACH;
+    case WSAENETRESET:
+        return ENETRESET;
+    case WSAECONNABORTED:
+        return ECONNABORTED;
+    case WSAECONNRESET:
+        return ECONNRESET;
+    case WSAENOBUFS:
+        return ENOBUFS;
+    case WSAEISCONN:
+        return EISCONN;
+    case WSAENOTCONN:
+        return ENOTCONN;
+    case WSAETIMEDOUT:
+        return ETIMEDOUT;
+    case WSAECONNREFUSED:
+        return ECONNREFUSED;
+    case WSAELOOP:
+        return ELOOP;
+    case WSAENAMETOOLONG:
+        return ENAMETOOLONG;
+    case WSAEHOSTUNREACH:
+        return EHOSTUNREACH;
+    case WSAENOTEMPTY:
+        return ENOTEMPTY;
     default:
         return wsaErr;
     }
