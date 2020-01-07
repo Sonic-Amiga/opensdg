@@ -18,11 +18,14 @@ else (MSVC)
   set(EXTRA_LIBS pthread)
 endif (MSVC)
 
-find_program(PROTOC protoc-c)
+# On Armbian 5.85 protoc-gen-c binary is not provided, so we try to use
+# protoc-c first. But Windows provides protoc-gen-c, but no protoc-c, so
+# we use common Google's frontend
+find_program(PROTOC NAMES protoc-c protoc)
 if (${PROTOC} STREQUAL "PROTOC-NOTFOUND")
   message(FATAL_ERROR "Protobuf C compiler is required for the build")
 endif (${PROTOC} STREQUAL "PROTOC-NOTFOUND")
-message("protoc-c found in ${PROTOC}")
+message("protoc found in ${PROTOC}")
 
 find_library(SODIUM NAMES libsodium sodium PATHS ${SODIUM_PATH})
 if (${SODIUM} STREQUAL "SODIUM-NOTFOUND")
