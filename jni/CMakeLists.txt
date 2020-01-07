@@ -13,18 +13,26 @@ if (${JAVAC} STREQUAL "JAVAC-NOTFOUND")
 else (${JAVAC} STREQUAL "JAVAC-NOTFOUND")
   message("javac found in ${JAVAC}")
 
-  # FIXME: Currently verified on Windows only
+  if (UNIX)
+    execute_process(COMMAND readlink -f ${JAVAC} OUTPUT_VARIABLE JAVAC_REALPATH)
+    set(JNI_SYS linux)
+  else (UNIX)
+    set(JAVAC_REALPATH ${JAVAC})
+    set(JNI_SYS win32)
+  endif (UNIX)
+
   set(JAVA_HOME $ENV{JAVA_HOME})
   if ("${JAVA_HOME}" STREQUAL "")
-    get_filename_component(JAVA_BINDIR ${JAVAC} DIRECTORY)
+    get_filename_component(JAVA_BINDIR ${JAVAC_REALPATH} DIRECTORY)
     set(JAVA_HOME ${JAVA_BINDIR}/..)
+    message("Detected JAVA_HOME ${JAVA_HOME}")
   endif ("${JAVA_HOME}" STREQUAL "")
 
   add_custom_command(OUTPUT ${JNI_HEADER}
                      COMMAND ${JAVAC} -h ${CMAKE_CURRENT_BINARY_DIR} -d ${JAVA_DIR}/target/classes ${JAVA_SOURCES}
                      DEPENDS ${JAVA_SOURCES})
   add_library(opensdg_jni SHARED ${JNI_SOURCES} ${JNI_HEADER} ${PUBLIC_INCLUDE_FILES})
-  target_include_directories(opensdg_jni PRIVATE ${JAVA_HOME}/include ${JAVA_HOME}/include/win32 ${CMAKE_CURRENT_BINARY_DIR})
+  target_include_directories(opensdg_jni PRIVATE ${JAVA_HOME}/include ${JAVA_HOME}/include/${JNI_SYS} ${CMAKE_CURRENT_BINARY_DIR})
   target_link_libraries(opensdg_jni PUBLIC opensdg)
 
   # javac has also created .class files, so let's build a JAR too
