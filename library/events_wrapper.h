@@ -36,22 +36,22 @@ static inline void event_post(event_t *ev)
 
 typedef sem_t event_t;
 
-void event_init(event_t *ev)
+static inline void event_init(event_t *ev)
 {
     sem_init(ev, 0, 0);
 }
 
-void event_destroy(event_t *ev)
+static inline void event_destroy(event_t *ev)
 {
     sem_destroy(ev);
 }
 
-void event_wait(event_t *ev)
+static inline void event_wait(event_t *ev)
 {
     sem_wait(ev);
 }
 
-void event_post(event_t *ev)
+static inline void event_post(event_t *ev)
 {
     sem_post(ev);
 }
