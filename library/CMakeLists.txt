@@ -18,11 +18,11 @@ else (MSVC)
   set(EXTRA_LIBS pthread)
 endif (MSVC)
 
-find_program(PROTOC protoc)
+find_program(PROTOC protoc-c)
 if (${PROTOC} STREQUAL "PROTOC-NOTFOUND")
-  message(FATAL_ERROR "Google protobuf compiler is required for the build")
+  message(FATAL_ERROR "Protobuf C compiler is required for the build")
 endif (${PROTOC} STREQUAL "PROTOC-NOTFOUND")
-message("protoc found in ${PROTOC}")
+message("protoc-c found in ${PROTOC}")
 
 find_library(SODIUM NAMES libsodium sodium PATHS ${SODIUM_PATH})
 if (${SODIUM} STREQUAL "SODIUM-NOTFOUND")
@@ -51,8 +51,8 @@ else (WIN32)
 endif (WIN32)
 
 add_custom_command(OUTPUT ${PROTOBUF_SOURCES}
-                   COMMAND ${PROTOC} --c_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path ${CMAKE_CURRENT_SOURCE_DIR} control_protocol.proto
-                   DEPENDS control_protocol.proto) 
+                   COMMAND ${PROTOC} --c_out=${CMAKE_CURRENT_BINARY_DIR} --proto_path ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/control_protocol.proto
+                   DEPENDS control_protocol.proto)
 
 if (STATIC_BUILD)
   add_library(opensdg STATIC ${LIBRARY_SOURCES} ${PROTOBUF_SOURCES} ${SYSDEP_SOURCES} ${PUBLIC_INCLUDE_FILES})
