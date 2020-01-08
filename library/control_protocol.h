@@ -6,7 +6,9 @@
 /* Grid message types */
 #define MSG_FORWARD_REMOTE      0
 #define MSG_PROTOCOL_VERSION    1
+#define MSG_FORWARD_HOLD        1
 #define MSG_FORWARD_REPLY       2
+#define MSG_FORWARD_ERROR       3
 #define MSG_PING                4
 #define MSG_PONG                5
 #define MSG_CALL_REMOTE         10
@@ -26,6 +28,14 @@
 #define MSG_PAIRING_CHALLENGE   3
 #define MSG_PAIRING_RESPONSE    4
 #define MSG_PAIRING_RESULT      5
+
+/* Error codes for MSG_FORWARD_ERROR */
+#define FORWARD_NO_ERROR     0
+#define FORWARD_SERVER_ERROR 1
+#define FORWARD_SYNTAX_ERROR 2
+#define FORWARD_BAD_TOKEN    3
+#define FORWARD_PEER_TIMEOUT 4
+#define FORWARD_BAD_VERSION  5
 
 #pragma pack(1)
 

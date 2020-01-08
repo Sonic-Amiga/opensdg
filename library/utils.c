@@ -136,6 +136,10 @@ const char *osdg_get_result_str(osdg_result_t res)
         return "Connection is in wrong state";
     case osdg_system_error:
         return "General OS error";
+    case osdg_server_error:
+        return "Internal server error";
+    case osdg_peer_timeout:
+        return "Peer connection timeout";
     default:
         return "Unknon result code";
     }

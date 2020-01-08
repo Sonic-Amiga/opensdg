@@ -106,10 +106,15 @@ int receive_packet(struct _osdg_connection *client)
     if (ret <= 0)
         return ret;
 
-    // Sometimes before MSG_FORWARD_REPLY a three byte packet arrives,
-    // containing a number one. I don't know what this is, ignore it.
-    if (ret == 3 && client->receiveBuffer[2] == 1)
+    /* Sometimes before MSG_FORWARD_REPLY a three byte packet arrives,
+       containing MSG_FORWARD_HOLD command. Ignore it. I don't know what this
+       is for; the name comes from LUA source code for old version of mdglib
+       found in DanfossLink application by Christian Christiansen. Huge
+       thanks for his reverse engineering effort!!! */
+    if (client->receiveBuffer[2] == MSG_FORWARD_HOLD)
+    {
         return 0;
+    }
 
     if (client->receiveBuffer[2] == MSG_FORWARD_REPLY)
     {
@@ -134,6 +139,42 @@ int receive_packet(struct _osdg_connection *client)
             return -1;
 
         return sendTELL(client);
+    }
+
+    /* Full understanding of error codes also comes from DanfossLink LUA code.
+       It is possible to reproduce FORWARD_PEER_TIMEOUT with DeviSmart by trying
+       to establish more than 2 connections to the same thermostat. */
+    if (client->receiveBuffer[2] == MSG_FORWARD_ERROR)
+    {
+        struct DataPacket *pkt = (struct DataPacket *)client->receiveBuffer;
+        unsigned int length = SWAP_16(pkt->size) - 1;
+        ForwardError *reply = forward_error__unpack(NULL, length, &pkt->data[1]);
+
+        if (!reply)
+        {
+            DUMP(ERRORS, pkt->data, length, "Failed to decode MSG_FORWARD_ERROR");
+            client->errorKind = osdg_protocol_error;
+            return -1;
+        }
+
+        switch (reply->code)
+        {
+        case FORWARD_SERVER_ERROR:
+            client->errorKind = osdg_server_error;
+            break;
+
+        case FORWARD_PEER_TIMEOUT:
+            client->errorKind = osdg_peer_timeout;
+            break;
+
+        default: /* We should never experience this */
+            LOG(ERRORS, "Unexpected MSG_FORWARD_ERROR %d", reply->code);
+            client->errorKind = osdg_protocol_error;
+            break;
+        }
+
+        forward_error__free_unpacked(reply, NULL);
+        return -1;
     }
 
     if (ret < sizeof(struct packet_header))

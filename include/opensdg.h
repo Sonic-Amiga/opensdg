@@ -41,7 +41,9 @@ typedef enum
     osdg_too_many_connections, /* Connection count exceeds main loop capability */
     osdg_connection_closed,    /* Connection closed by peer */
     osdg_wrong_state,          /* A request is inappropriate for current connection state */
-    osdg_system_error          /* General OS-specific error */
+    osdg_system_error,         /* General OS-specific error */
+    osdg_server_error,         /* Internal server error */
+    osdg_peer_timeout          /* Connection to peer timed out */
 } osdg_result_t;
 
 OSDG_API void osdg_create_private_key(osdg_key_t key);

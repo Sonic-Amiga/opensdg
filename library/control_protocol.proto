@@ -44,6 +44,12 @@ message ForwardReply
   required string signature = 1;
 }
 
+// MSG_FORWARD_ERROR
+message ForwardError
+{
+  required uint32 code = 1;
+}
+
 // MSG_CALL_REMOTE
 message ConnectToPeer
 {
