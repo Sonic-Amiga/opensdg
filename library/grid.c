@@ -77,7 +77,10 @@ static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
 
         /* This is reply to the very first PING, we are connected now. */
         if (conn->state == osdg_connecting)
+        {
             connection_set_status(conn, osdg_connected);
+            mainloop_client_event(); // This will recalculate delay before the next PING
+        }
     }
     else if (msgType = MSG_REMOTE_REPLY)
     {
