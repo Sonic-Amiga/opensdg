@@ -114,5 +114,5 @@ int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount)
         return -1;
 
     now = timestamp();
-    return now > sleepUntil ? (int)(now - sleepUntil) : 0;
+    return sleepUntil > now ? (int)(sleepUntil - now) : 0;
 }
