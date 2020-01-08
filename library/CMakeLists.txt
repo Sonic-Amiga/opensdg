@@ -73,3 +73,7 @@ endif (NOT ${SODIUM_ROOT} STREQUAL "")
 if (NOT ${PROTOBUF_ROOT} STREQUAL "")
   target_include_directories(opensdg PRIVATE ${PROTOBUF_ROOT}/include)
 endif (NOT ${PROTOBUF_ROOT} STREQUAL "")
+
+install(TARGETS opensdg
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)

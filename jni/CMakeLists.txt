@@ -44,5 +44,10 @@ else (${JAVAC} STREQUAL "JAVAC-NOTFOUND")
     target_link_options(opensdg_jni PRIVATE "/ignore:4099")
   endif (MSVC AND STATIC_BUILD)
 
+  install(TARGETS opensdg_jni
+          LIBRARY DESTINATION lib
+          ARCHIVE DESTINATION lib)
+
+
 endif (${JAVAC} STREQUAL "JAVAC-NOTFOUND")
 
