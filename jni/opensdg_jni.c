@@ -1,3 +1,5 @@
+#include <inttypes.h>
+
 #include "org_opensdg_OpenSDG.h"
 #include "opensdg.h"
 
@@ -59,7 +61,7 @@ JNIEXPORT void JNICALL Java_org_opensdg_OpenSDG_set_1private_1key(JNIEnv *env, j
 {
     jbyte *nativeKey = getNativeKey(env, key);
     
-    osdg_set_private_key((osdg_connection_t)conn, nativeKey);
+    osdg_set_private_key((osdg_connection_t)(uintptr_t)conn, nativeKey);
     (*env)->ReleaseByteArrayElements(env, key, nativeKey, 0);
 }
 
@@ -78,7 +80,7 @@ static jbyteArray makeJavaKey(JNIEnv *env, const osdg_key_t nativeKey)
 
 JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_get_1my_1peer_1id(JNIEnv *env, jclass cl, jlong conn)
 {
-    return makeJavaKey(env, osdg_get_my_peer_id((osdg_connection_t)conn));
+    return makeJavaKey(env, osdg_get_my_peer_id((osdg_connection_t)(uintptr_t)conn));
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_CreatePrivateKey(JNIEnv *env, jclass cl)
@@ -107,7 +109,7 @@ static jmethodID GetObjectMethodID(JNIEnv *env, jobject obj, const char *name, c
 static void connection_state_change(osdg_connection_t conn, enum osdg_connection_state state)
 {
     JNIEnv *env = NULL;
-    jobject obj = osdg_get_user_data((osdg_connection_t)conn);
+    jobject obj = osdg_get_user_data((osdg_connection_t)(uintptr_t)conn);
     static jmethodID mid;
 
     (*jvm)->GetEnv(jvm, (void **)&env, JNI_VERSION_1_4);
@@ -121,7 +123,7 @@ static void connection_state_change(osdg_connection_t conn, enum osdg_connection
 static osdg_result_t connection_receive_data(osdg_connection_t conn, const void *data, unsigned int len)
 {
     JNIEnv *env = NULL;
-    jobject obj = osdg_get_user_data((osdg_connection_t)conn);
+    jobject obj = osdg_get_user_data((osdg_connection_t)(uintptr_t)conn);
     jbyteArray jData;
     static jmethodID mid;
 
@@ -145,27 +147,27 @@ JNIEXPORT jlong JNICALL Java_org_opensdg_OpenSDG_connection_1create(JNIEnv *env,
         osdg_set_receive_data_callback(conn, connection_receive_data);
     }
 
-    return (jlong)conn;
+    return (uintptr_t)conn;
 }
 
 JNIEXPORT void JNICALL Java_org_opensdg_OpenSDG_connection_1destroy(JNIEnv *env, jclass cl, jlong conn)
 {
-    jweak jConn = osdg_get_user_data((osdg_connection_t)conn);
+    jweak jConn = osdg_get_user_data((osdg_connection_t)(uintptr_t)conn);
 
     (*env)->DeleteWeakGlobalRef(env, jConn);
-    osdg_connection_destroy((osdg_connection_t)conn);
+    osdg_connection_destroy((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_connect_1to_1danfoss(JNIEnv *env, jclass cl, jlong conn)
 {
-    return osdg_connect_to_danfoss((osdg_connection_t)conn);
+    return osdg_connect_to_danfoss((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_connect_1to_1remote(JNIEnv *env, jclass cl, jlong grid, jlong peer, jbyteArray peerId, jstring protocol)
 {
     unsigned char *nativeKey = getNativeKey(env, peerId);
     const char *nativeProto = (*env)->GetStringUTFChars(env, protocol, NULL);
-    osdg_result_t res = osdg_connect_to_remote((osdg_connection_t)grid, (osdg_connection_t)peer, nativeKey, nativeProto);
+    osdg_result_t res = osdg_connect_to_remote((osdg_connection_t)(uintptr_t)grid, (osdg_connection_t)(uintptr_t)peer, nativeKey, nativeProto);
 
     (*env)->ReleaseByteArrayElements(env, peerId, nativeKey, 0);
     (*env)->ReleaseStringUTFChars(env, protocol, nativeProto);
@@ -175,7 +177,7 @@ JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_connect_1to_1remote(JNIEnv *env,
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_pair_1remote(JNIEnv *env, jclass cl, jlong grid, jlong peer, jstring otp)
 {
     const char *nativeOtp = (*env)->GetStringUTFChars(env, otp, NULL);
-    osdg_result_t res = osdg_pair_remote((osdg_connection_t)grid, (osdg_connection_t)peer, nativeOtp);
+    osdg_result_t res = osdg_pair_remote((osdg_connection_t)(uintptr_t)grid, (osdg_connection_t)(uintptr_t)peer, nativeOtp);
 
     (*env)->ReleaseStringUTFChars(env, otp, nativeOtp);
     return res;
@@ -183,14 +185,14 @@ JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_pair_1remote(JNIEnv *env, jclass
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_connection_1close(JNIEnv *env, jclass cl, jlong conn)
 {
-    return osdg_connection_close((osdg_connection_t)conn);
+    return osdg_connection_close((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_send_1data(JNIEnv *env, jclass cl, jlong conn, jbyteArray data)
 {
     jbyte *nativeData = (*env)->GetByteArrayElements(env, data, NULL);
     jsize size = (*env)->GetArrayLength(env, data);
-    osdg_result_t res = osdg_send_data((osdg_connection_t)conn, nativeData, size);
+    osdg_result_t res = osdg_send_data((osdg_connection_t)(uintptr_t)conn, nativeData, size);
 
     (*env)->ReleaseByteArrayElements(env, data, nativeData, 0);
     return res;
@@ -198,37 +200,37 @@ JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_send_1data(JNIEnv *env, jclass c
 
 JNIEXPORT void JNICALL Java_org_opensdg_OpenSDG_set_1blocking_1mode(JNIEnv *env, jclass cl, jlong conn, jboolean blocking)
 {
-    osdg_set_blocking_mode((osdg_connection_t)conn, blocking);
+    osdg_set_blocking_mode((osdg_connection_t)(uintptr_t)conn, blocking);
 }
 
 JNIEXPORT jboolean JNICALL Java_org_opensdg_OpenSDG_get_1blocking_1mode(JNIEnv *env, jclass cl, jlong conn)
 {
-    return osdg_get_blocking_mode((osdg_connection_t)conn);
+    return osdg_get_blocking_mode((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_get_1connection_1state(JNIEnv *env, jclass cl, jlong conn)
 {
-    return osdg_get_connection_state((osdg_connection_t)conn);
+    return osdg_get_connection_state((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_get_1last_1result(JNIEnv * env, jclass cl, jlong conn)
 {
-    return osdg_get_last_result((osdg_connection_t)conn);
+    return osdg_get_last_result((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_get_1last_1errno(JNIEnv *env, jclass cl, jlong conn)
 {
-    return osdg_get_last_errno((osdg_connection_t)conn);
+    return osdg_get_last_errno((osdg_connection_t)(uintptr_t)conn);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_org_opensdg_OpenSDG_get_1peer_1id(JNIEnv *env, jclass cl, jlong conn)
 {
-    return makeJavaKey(env, osdg_get_peer_id((osdg_connection_t)conn));
+    return makeJavaKey(env, osdg_get_peer_id((osdg_connection_t)(uintptr_t)conn));
 }
 
 JNIEXPORT jint JNICALL Java_org_opensdg_OpenSDG_set_1ping_1interval(JNIEnv *env, jclass cl, jlong conn, jint seconds)
 {
-    return osdg_set_ping_interval((osdg_connection_t)conn, seconds);
+    return osdg_set_ping_interval((osdg_connection_t)(uintptr_t)conn, seconds);
 }
 
 JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1result_1str(JNIEnv *env, jclass cl, jint res)
@@ -241,6 +243,6 @@ JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1last_1result_1str(JNIEnv
 {
     char buffer[1024];
 
-    osdg_get_last_result_str((osdg_connection_t)conn, buffer, sizeof(buffer));
+    osdg_get_last_result_str((osdg_connection_t)(uintptr_t)conn, buffer, sizeof(buffer));
     return (*env)->NewStringUTF(env, buffer);
 }
