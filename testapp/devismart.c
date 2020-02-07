@@ -938,6 +938,9 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
 
     switch (msgCode)
     {
+    case TESTANDPRODUCTION_RESTARTSIMPLELINK:
+    case WIFI_ROLE:
+    case WIFI_CONNECT:
     case WIFI_UPDATE_CONNECTED_STRENGTH:
         packet->header.dataSize = 1;
         break;
