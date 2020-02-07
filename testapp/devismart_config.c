@@ -91,8 +91,9 @@ static int parse_config_data(const char *json, int size)
     {
         if ((jsoneq(json, &t[i], "rooms") == 0) && (t[i + 1].type == JSMN_ARRAY))
         {
+            jsmntok_t *g = &t[i + 2];
+
             for (j = 0; j < t[i + 1].size; j++) {
-                jsmntok_t *g = &t[i + j + 2];
                 char *roomName = NULL;
                 char *roomPeer = NULL;
 
@@ -104,7 +105,7 @@ static int parse_config_data(const char *json, int size)
                     return 1;
                 }
 
-                for (k = 1; k < g[0].size; k += 2)
+                for (k = 1; k <= g[0].size * 2; k += 2)
                 {
                     if (jsoneq(json, &g[k], "roomName") == 0) {
                         roomName = jsonstrdup(json, &g[k + 1]);
@@ -129,6 +130,8 @@ static int parse_config_data(const char *json, int size)
 
                 free(roomName);
                 free(roomPeer);
+
+                g += g[0].size * 2 + 1;
             }
 
             i += t[i + 1].size + 1;
