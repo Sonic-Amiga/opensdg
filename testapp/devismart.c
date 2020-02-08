@@ -168,7 +168,7 @@ static const char *strCode(enum MsgCode val)
   ENUM_TO_STR(MDG_PRIVATE_KEY)
   ENUM_TO_STR(MDG_REVOKE_SPECIFIC_PAIRING)
   ENUM_TO_STR(MDG_REVOKE_ALL_PAIRINGS)
-  ENUM_TO_STR(MDG_LICENCE_KEY)
+  ENUM_TO_STR(MDG_LICENSE_KEY)
   ENUM_TO_STR(MDG_RANDOM_BYTES)
   ENUM_TO_STR(MDG_CONNECTION_COUNT)
   ENUM_TO_STR(MDG_PENDING_PAIRING)
@@ -398,7 +398,7 @@ enum MsgClass findClass(enum MsgCode code)
     case MDG_PRIVATE_KEY:
     case MDG_REVOKE_SPECIFIC_PAIRING:
     case MDG_REVOKE_ALL_PAIRINGS:
-    case MDG_LICENCE_KEY:
+    case MDG_LICENSE_KEY:
     case MDG_RANDOM_BYTES:
     case MDG_CONNECTION_COUNT:
     case MDG_PENDING_PAIRING:
@@ -629,7 +629,7 @@ int findCode(const char *str)
     STR_TO_ENUM(MDG_PRIVATE_KEY)
     STR_TO_ENUM(MDG_REVOKE_SPECIFIC_PAIRING)
     STR_TO_ENUM(MDG_REVOKE_ALL_PAIRINGS)
-    STR_TO_ENUM(MDG_LICENCE_KEY)
+    STR_TO_ENUM(MDG_LICENSE_KEY)
     STR_TO_ENUM(MDG_RANDOM_BYTES)
     STR_TO_ENUM(MDG_CONNECTION_COUNT)
     STR_TO_ENUM(MDG_PENDING_PAIRING)
@@ -924,7 +924,6 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
     int msgCode = findCode(cmdStr);
     unsigned char buffer[sizeof(struct SendMsgHeader) + 255]; /* Payload size is one byte, so maximum of 255 */
     struct SendMsgHeader *packet = (struct SendMsgHeader *)&buffer;
-    unsigned long payloadVal;
 
     if (msgCode == -1)
     {
@@ -932,7 +931,7 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
         return osdg_no_error;
     }
 
-    packet->noPayload = 0;
+    packet->noPayload = (*argStr) ? 0 : 1;
     packet->header.msgClass = findClass(msgCode);
     packet->header.msgCode = msgCode;
 
@@ -942,29 +941,46 @@ osdg_result_t devismart_send(osdg_connection_t conn, char *argStr)
     case WIFI_ROLE:
     case WIFI_CONNECT:
     case WIFI_UPDATE_CONNECTED_STRENGTH:
+    case MDG_SHOULD_CONNECT:
         packet->header.dataSize = 1;
         break;
 
     /* This code is severely incomplete as it was used only for testing */
 
     default:
-        printf("Unsupported message code %s\n", cmdStr);
-        return osdg_no_error;
+        packet->header.dataSize = 0;
+        break;
     }
 
-    payloadVal = strtoul(getWord(&argStr), NULL, 0);
-
-    switch (packet->header.dataSize)
+    if (*argStr)
     {
-    case 1:
-        *packet->payload = (unsigned char)payloadVal;
-        break;
-    case 2:
-        *((unsigned short *)packet->payload) = (unsigned short)payloadVal;
-        break;
-    case 4:
-        *((unsigned int *)packet->payload) = payloadVal;
-        break;
+        unsigned long payloadVal;
+
+        if (!packet->header.dataSize)
+        {
+            printf("Unsupported message code %s\n", cmdStr);
+            return osdg_no_error;
+        }
+
+        payloadVal = strtoul(getWord(&argStr), NULL, 0);
+
+        switch (packet->header.dataSize)
+        {
+        case 1:
+            *packet->payload = (unsigned char)payloadVal;
+            break;
+        case 2:
+            *((unsigned short *)packet->payload) = (unsigned short)payloadVal;
+            break;
+        case 4:
+            *((unsigned int *)packet->payload) = payloadVal;
+            break;
+        }
+    }
+    else
+    {
+        packet->noPayload = 1;
+        packet->header.dataSize = 0;
     }
 
     return osdg_send_data(conn, packet, sizeof(struct SendMsgHeader) + packet->header.dataSize);

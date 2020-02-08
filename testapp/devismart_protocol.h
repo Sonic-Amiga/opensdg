@@ -154,9 +154,9 @@ enum MsgCode
   WIFI_SKIP_AP_MODE                            = 29803, /* 1   Boolean ?   ??? */
   WIFI_UPDATE_CONNECTED_STRENGTH               = 29805, /* 1   Boolean     Command: write true to get WIFI_CONNECTED_STRENGTH response */
   /* Class MDG */
-  MDG_ERROR_CODE                               = 1010,  /* 2   uint16_t    Error code from MDG. Cloud connection perhaps ? */
-  MDG_CONNECTED_TO_SERVER                      = 29825, /* 1   Boolean     MDG cloud connection presence */
-  MDG_SHOULD_CONNECT                           = 29826, /* 1   Boolean ?   Disables cloud operation ??? */
+  MDG_ERROR_CODE                               = 1010,  /* 2   uint16_t    Last error code. See below. */
+  MDG_CONNECTED_TO_SERVER                      = 29825, /* 1   Boolean     MDG server current connection state */
+  MDG_SHOULD_CONNECT                           = 29826, /* 1   Boolean     Enable or disable connecting to the MDG server. Setting false does not break current client connection. */
   MDG_PAIRING_COUNT                            = 29828, /* 1   uint32_t    Number of active pairings */
   MDG_PAIRING_0_ID                             = 29952, /* 33  Array       Peer ID for this pairing */
   MDG_PAIRING_0_DESCRIPTION                    = 29953, /* 33  String      DEVISmart app stores user name here */
@@ -221,7 +221,7 @@ enum MsgCode
   MDG_PRIVATE_KEY                              = 30464,
   MDG_REVOKE_SPECIFIC_PAIRING                  = 30466, /* 33  Array ?     Probably used as revocation command. Reads all zeroes on my device */ 
   MDG_REVOKE_ALL_PAIRINGS                      = 30467, /* 1   uint8_t     Probably to be used as a command. Reads zero. */
-  MDG_LICENCE_KEY                              = 30468,
+  MDG_LICENSE_KEY                              = 30468,
   MDG_RANDOM_BYTES                             = 30469,
   MDG_CONNECTION_COUNT                         = 30470, /* 1   uint8_t     Number of active client connections to this thermostat */
   MDG_PENDING_PAIRING                          = 30471, /* 33  Array       Peer ID for initial pairing during setup. Confirmation via button is required. */
@@ -324,5 +324,9 @@ static inline float ReadDecimal(const unsigned char *payload)
 {
     return (float)(payload[0] + ((unsigned int)payload[1] << 8)) / 100;
 }
+
+/* Some known MDG_ERROR_CODE values */
+#define MDG_ERROR_OK                0x0000 /* No error */
+#define MDG_ERROR_PERMISSION_DENIED 0x240c /* Attempt to fetch protected value like MDG_LICENSE_KEY */
 
 #endif
