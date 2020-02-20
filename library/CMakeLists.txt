@@ -29,7 +29,7 @@ message("protoc found in ${PROTOC}")
 
 find_library(SODIUM NAMES libsodium sodium PATHS ${SODIUM_PATH})
 if (${SODIUM} STREQUAL "SODIUM-NOTFOUND")
-  message(FATAL_ERROR "libsodium is required for the build")
+  message(FATAL_ERROR "libsodium is required for the build. You may need to specify SODIUM_ROOT.")
 endif (${SODIUM} STREQUAL "SODIUM-NOTFOUND")
 message("libsodium found in ${SODIUM}")
 
