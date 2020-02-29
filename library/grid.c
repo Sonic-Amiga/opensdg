@@ -82,7 +82,7 @@ static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
             mainloop_client_event(); // This will recalculate delay before the next PING
         }
     }
-    else if (msgType = MSG_REMOTE_REPLY)
+    else if (msgType == MSG_REMOTE_REPLY)
     {
         PeerReply *reply = peer_reply__unpack(NULL, length, data);
         struct list_element *req;
@@ -182,10 +182,21 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client,
 
     /* Permute servers in random order in order to distribute the load */
     list = malloc(nServers * sizeof(void *));
+    randomized = malloc(nServers * sizeof(void*));
+
+    if (!(list && randomized))
+    {
+        free((void *)list);
+        free((void *)randomized);
+
+        client->errorKind = osdg_memory_error;
+        client->state = osdg_error;
+        return osdg_connection_failed;
+    }
+
     for (i = 0; i < nServers; i++)
         list[i] = &servers[i];
 
-    randomized = malloc(nServers * sizeof(void *));
     left = nServers;
     for (i = 0; i < nServers; i++)
     {
