@@ -155,7 +155,8 @@ osdg_result_t osdg_connect_to_danfoss(osdg_connection_t conn)
 osdg_result_t osdg_connect_to_grid(osdg_connection_t client,
                                    const struct osdg_endpoint *servers, unsigned int nServers)
 {
-    unsigned int left, i, res;
+    unsigned int left, i;
+    int res;
     const struct osdg_endpoint **list, **randomized;
 
     if (connection_in_use(client))
@@ -206,12 +207,15 @@ osdg_result_t osdg_connect_to_grid(osdg_connection_t client,
 
     free((void *)randomized);
 
-    if (res < 0)
-        return client->errorKind;
-
     if (res == 0)
     {
         client->errorKind = osdg_connection_failed;
+        res = -1;
+    }
+
+    if (res < 0)
+    {
+        client->state = osdg_error;
         return osdg_connection_failed;
     }
 

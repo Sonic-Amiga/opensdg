@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#include <Winsock2.h>
-#endif
 
 #include "opensdg.h"
 #include "testapp.h"
@@ -519,94 +516,100 @@ int main(int argc, const char *const *argv)
   osdg_set_state_change_callback(client, grid_status_changed);
   osdg_set_private_key(client, clientKey);
 
-  r = osdg_connect_to_danfoss(client);
-  if (r == 0)
-  {
-      printf("Enter command; \"help\" to get help\n");
-
-      for (;;)
+  /* Retry until we succeed. This helped to catch a bug. */
+  do {
+      r = osdg_connect_to_danfoss(client);
+      if (r != osdg_no_error)
       {
-        char buffer[256];
-        char *p = buffer;
-        const char *cmd;
-
-        putchar('>');
-        fgets(buffer, sizeof(buffer), stdin);
-
-        cmd = getWord(&p);
-
-        if (!cmd[0])
-          continue;
-
-        if (!strcmp(cmd, "help"))
-        {
-          printf("help                       - this help\n"
-                 "close [connection #]       - close a connection\n"
-                 "connect [peer # or ID]     - connect to peer by index or raw ID\n"
-                 "list pairings              - list known pairings\n"
-                 "list peers                 - list current connections\n"
-                 "pair [OTP]                 - pair with the given OTP\n"
-                 "ping [interval]            - set grid ping interval in seconds\n"
-                 "send [connection #] [data] - send data to a peer\n"
-                 "blocking [on|off]          - set blocking mode\n"
-                 "quit                       - end session\n"
-                 "whoami                     - print own peer information\n");
-        }
-        else if (!strcmp(cmd, "connect"))
-        {
-          connect_to_peer(client, p);
-        }
-        else if (!strcmp(cmd, "pair"))
-        {
-            pair_remote_peer(client, p);
-        }
-        else if (!strcmp(cmd, "close"))
-        {
-            close_connection(p);
-        }
-        else if (!strcmp(cmd, "list"))
-        {
-          cmd = getWord(&p);
-          if (!strcmp(cmd, "pairings"))
-            list_pairings();
-          else if (!strcmp(cmd, "peers"))
-            list_peers();
-          else
-            printf("Unknown item %s", cmd);
-        }
-        else if (!strcmp(cmd, "ping"))
-        {
-            set_ping_interval(client, p);
-        }
-        else if (!strcmp(cmd, "send"))
-        {
-            send_data(p);
-        }
-        else if (!strcmp(cmd, "blocking"))
-        {
-            set_blocking_mode(p);
-        }
-        else if (!strcmp(cmd, "quit"))
-        {
-          break;
-        }
-        else if (!strcmp(cmd, "whoami"))
-        {
-            printf("Private key: ");
-            hexdump(clientKey, sizeof(osdg_key_t));
-            printf("\nPeer ID    : ");
-            hexdump(osdg_get_my_peer_id(client), sizeof(osdg_key_t));
-            putchar('\n');
-        }
-        else
-        {
-          printf("Unknown command %s\n", cmd);
-        }
+          print_client_error(client);
+#ifdef _WIN32
+          Sleep(1000);
+#else
+          sleep(1);
+#endif
       }
-  }
-  else
+  } while (r != osdg_no_error);
+
+  printf("Enter command; \"help\" to get help\n");
+
+  for (;;)
   {
-    print_client_error(client);
+    char buffer[256];
+    char *p = buffer;
+    const char *cmd;
+
+    putchar('>');
+    fgets(buffer, sizeof(buffer), stdin);
+
+    cmd = getWord(&p);
+
+    if (!cmd[0])
+        continue;
+
+    if (!strcmp(cmd, "help"))
+    {
+        printf("help                       - this help\n"
+                "close [connection #]       - close a connection\n"
+                "connect [peer # or ID]     - connect to peer by index or raw ID\n"
+                "list pairings              - list known pairings\n"
+                "list peers                 - list current connections\n"
+                "pair [OTP]                 - pair with the given OTP\n"
+                "ping [interval]            - set grid ping interval in seconds\n"
+                "send [connection #] [data] - send data to a peer\n"
+                "blocking [on|off]          - set blocking mode\n"
+                "quit                       - end session\n"
+                "whoami                     - print own peer information\n");
+    }
+    else if (!strcmp(cmd, "connect"))
+    {
+        connect_to_peer(client, p);
+    }
+    else if (!strcmp(cmd, "pair"))
+    {
+        pair_remote_peer(client, p);
+    }
+    else if (!strcmp(cmd, "close"))
+    {
+        close_connection(p);
+    }
+    else if (!strcmp(cmd, "list"))
+    {
+        cmd = getWord(&p);
+        if (!strcmp(cmd, "pairings"))
+        list_pairings();
+        else if (!strcmp(cmd, "peers"))
+        list_peers();
+        else
+        printf("Unknown item %s", cmd);
+    }
+    else if (!strcmp(cmd, "ping"))
+    {
+        set_ping_interval(client, p);
+    }
+    else if (!strcmp(cmd, "send"))
+    {
+        send_data(p);
+    }
+    else if (!strcmp(cmd, "blocking"))
+    {
+        set_blocking_mode(p);
+    }
+    else if (!strcmp(cmd, "quit"))
+    {
+        break;
+    }
+    else if (!strcmp(cmd, "whoami"))
+    {
+        printf("Private key: ");
+        hexdump(clientKey, sizeof(osdg_key_t));
+        printf("\nPeer ID    : ");
+        hexdump(osdg_get_my_peer_id(client), sizeof(osdg_key_t));
+        putchar('\n');
+    }
+    else
+    {
+        printf("Unknown command %s\n", cmd);
+    }
   }
 
   osdg_connection_close(client);
