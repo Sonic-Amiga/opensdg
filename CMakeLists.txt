@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.7)
 
 project(OpenSDG)
 
-include_directories(include)
+include(GNUInstallDirs)
 
+include_directories(include)
 set(PUBLIC_INCLUDE_FILES ${CMAKE_SOURCE_DIR}/include/opensdg.h)
 
 if (MSVC)
@@ -35,5 +36,5 @@ add_subdirectory(library)
 add_subdirectory(jni)
 add_subdirectory(testapp)
 
-install(FILES ${PUBLIC_INCLUDE_FILES} DESTINATION include)
+install(FILES ${PUBLIC_INCLUDE_FILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
