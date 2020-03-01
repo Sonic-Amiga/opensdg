@@ -1,0 +1,32 @@
+Source: opensdg
+Priority: optional
+Maintainer: Pavel Fedin <pavel_fedin@mail.ru>
+Build-Depends: debhelper (>= 11), libprotobuf-c-dev, libsodium-dev, default-jdk
+Standards-Version: 4.1.3
+Section: libs
+Homepage: http://github.com/Sonic-Amiga/opensdg
+Vcs-Browser: http://github.com/Sonic-Amiga/opensdg
+Vcs-Git: https://github.com/Sonic-Amiga/opensdg.git
+
+Package: opensdg-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: opensdg (= ${binary:Version}), ${misc:Depends}
+Description: SecureDeviceGrid protocol implementation, development files
+ Development files for opensdg library
+
+Package: opensdg-jni
+Architecture: any
+Multi-Arch: same
+Depends: opensdg (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: SecureDeviceGrid protocol implementation, java binding
+ Java binding for opensdg library
+
+Package: opensdg
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: SecureDeviceGrid protocol implementation
+ This library allows one to communicate with IoT hardware, using
+ SecureDeviceGrid (http://securedevicegrid.com/) cloud infrastructure

@@ -1,1 +1,8 @@
 build*
+obj-*
+debian/.debhelper
+debian/debhelper-build-stamp
+debian/opensdg*
+debian/tmp
+java/target
+java/*.jar

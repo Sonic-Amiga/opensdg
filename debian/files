@@ -1,0 +1,6 @@
+opensdg-dbgsym_1.0.0-1_amd64.deb debug optional automatic=yes
+opensdg-dev_1.0.0-1_amd64.deb libdevel optional
+opensdg-jni-dbgsym_1.0.0-1_amd64.deb debug optional automatic=yes
+opensdg-jni_1.0.0-1_amd64.deb libs optional
+opensdg_1.0.0-1_amd64.buildinfo libs optional
+opensdg_1.0.0-1_amd64.deb libs optional
