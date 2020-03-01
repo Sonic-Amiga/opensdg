@@ -1,3 +1,7 @@
+set(LIBRARY_MAJOR 1)
+set(LIBRARY_MINOR 0)
+set(LIBRARY_PATCH 0)
+
 # Unfortunately Windows doesn't have centralized source package management
 # like pkg-config
 if (MSVC)
@@ -66,6 +70,8 @@ else (STATIC_BUILD)
 endif (STATIC_BUILD)
 target_include_directories(opensdg PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
+set_target_properties(opensdg PROPERTIES VERSION ${LIBRARY_MAJOR}.${LIBRARY_MINOR}.${LIBRARY_PATCH}
+                                         SOVERSION ${LIBRARY_MAJOR})
 
 if (NOT ${SODIUM_ROOT} STREQUAL "")
   target_include_directories(opensdg PRIVATE ${SODIUM_ROOT}/include)

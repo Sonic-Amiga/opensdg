@@ -34,3 +34,6 @@ endif (MSVC)
 add_subdirectory(library)
 add_subdirectory(jni)
 add_subdirectory(testapp)
+
+install(FILES ${PUBLIC_INCLUDE_FILES} DESTINATION include)
+
