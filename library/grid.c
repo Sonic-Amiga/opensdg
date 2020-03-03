@@ -82,7 +82,7 @@ static osdg_result_t grid_handle_incoming_packet(struct _osdg_connection *conn,
             mainloop_client_event(); // This will recalculate delay before the next PING
         }
     }
-    else if (msgType == MSG_REMOTE_REPLY)
+    else if ((msgType == MSG_REMOTE_REPLY) || (msgType == MSG_PAIR_REMOTE_REPLY))
     {
         PeerReply *reply = peer_reply__unpack(NULL, length, data);
         struct list_element *req;
