@@ -2,6 +2,7 @@ build*
 obj-*
 debian/.debhelper
 debian/debhelper-build-stamp
+debian/files
 debian/opensdg*
 debian/tmp
 java/target
