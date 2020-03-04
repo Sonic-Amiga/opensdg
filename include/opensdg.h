@@ -131,6 +131,6 @@ struct osdg_version
     unsigned int patch;
 };
 
-OSDG_API osdg_get_version(struct osdg_version *ver);
+OSDG_API void osdg_get_version(struct osdg_version *ver);
 
 #endif

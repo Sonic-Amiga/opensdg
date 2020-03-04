@@ -146,7 +146,7 @@ const char *osdg_get_result_str(osdg_result_t res)
     }
 }
 
-osdg_get_version(struct osdg_version* ver)
+void osdg_get_version(struct osdg_version* ver)
 {
     ver->major = OSDG_MAJOR;
     ver->minor = OSDG_MINOR;
