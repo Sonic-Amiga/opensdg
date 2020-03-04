@@ -1,5 +1,13 @@
+opensdg (1.0.1-1) unstable; urgency=medium
+
+  * Fixed freezing in osdg_pair_remote()
+  * Added osdg_get_version() function
+
+ -- Pavel Fedin <pavel_fedin@mail.ru>  Sun, 05 Mar 2020 00:26:00 +0300
+
 opensdg (1.0.0-1) unstable; urgency=medium
 
   * Initial release
 
  -- Pavel Fedin <pavel_fedin@mail.ru>  Sun, 01 Mar 2020 11:49:52 +0300
+
