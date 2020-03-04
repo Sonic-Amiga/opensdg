@@ -124,4 +124,13 @@ OSDG_API int osdg_hex_to_bin(unsigned char *bin, size_t buffer_size, const unsig
 OSDG_API size_t osdg_get_last_result_str(osdg_connection_t conn, char *buffer, size_t len);
 OSDG_API const char *osdg_get_result_str(osdg_result_t res);
 
+struct osdg_version
+{
+    unsigned int major;
+    unsigned int minor;
+    unsigned int patch;
+};
+
+OSDG_API osdg_get_version(struct osdg_version *ver);
+
 #endif

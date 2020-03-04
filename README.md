@@ -95,3 +95,14 @@ variable to cmake when configuring OpenSDG.
 - cmake .. -DSODIUM_ROOT=D:\path\to\libsodium
 - Open resulting protobuf-c.sln
 - Select "Release" configuration and execute BUILD_ALL and INSTALL targets.
+
+# Version history
+
+## v1.0.0
+
+- Initial rehease
+
+## v1.0.1
+
+- Fixed freezing in osdg_pair_remote()
+- Added osdg_get_version() function

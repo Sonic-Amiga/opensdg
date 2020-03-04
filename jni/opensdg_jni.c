@@ -246,3 +246,12 @@ JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1last_1result_1str(JNIEnv
     osdg_get_last_result_str((osdg_connection_t)(uintptr_t)conn, buffer, sizeof(buffer));
     return (*env)->NewStringUTF(env, buffer);
 }
+
+JNIEXPORT jlong JNICALL Java_org_opensdg_OpenSDG_get_1version(JNIEnv* env, jclass cl)
+{
+    struct osdg_version ver;
+
+    osdg_get_version(&ver);
+    /* I am so lazy to write proper marshalling via properties... ;) */
+    return (((jlong)ver.major) << 32) | (ver.minor << 16) | ver.patch;
+}

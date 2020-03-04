@@ -4,6 +4,7 @@
 #include "mainloop.h"
 #include "opensdg.h"
 #include "utils.h"
+#include "version.h"
 
 #ifndef _WIN32
 
@@ -143,4 +144,11 @@ const char *osdg_get_result_str(osdg_result_t res)
     default:
         return "Unknon result code";
     }
+}
+
+osdg_get_version(struct osdg_version* ver)
+{
+    ver->major = OSDG_MAJOR;
+    ver->minor = OSDG_MINOR;
+    ver->patch = OSDG_PATCH;
 }

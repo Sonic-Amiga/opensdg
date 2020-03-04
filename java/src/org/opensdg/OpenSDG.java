@@ -9,6 +9,18 @@ public class OpenSDG {
         }
     }
 
+    public static class Version {
+        public int major;
+        public int minor;
+        public int patch;
+
+        Version(long code) {
+            major = (int) ((code >> 24) & 0x0FFFF);
+            minor = (int) ((code >> 16) & 0x0FFFF);
+            patch = (int) (code & 0x0FFFF);
+        }
+    };
+
     static native void set_private_key(long conn, byte[] key);
 
     static native byte[] get_my_peer_id(long conn);
@@ -51,7 +63,13 @@ public class OpenSDG {
 
     native static int set_ping_interval(long conn, int seconds);
 
-    public String GetResultStr(OSDGResult res) {
+    native static long get_version();
+
+    public static String GetResultStr(OSDGResult res) {
         return get_result_str(res.ordinal());
+    }
+
+    public Version GetVersion() {
+        return new Version(get_version());
     }
 }
