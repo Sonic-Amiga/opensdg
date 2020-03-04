@@ -19,6 +19,11 @@ public class OpenSDG {
             minor = (int) ((code >> 16) & 0x0FFFF);
             patch = (int) (code & 0x0FFFF);
         }
+
+        @Override
+        public String toString() {
+            return major + "." + minor + "." + patch;
+        }
     };
 
     static native void set_private_key(long conn, byte[] key);
