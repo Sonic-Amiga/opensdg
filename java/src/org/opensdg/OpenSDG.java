@@ -15,7 +15,7 @@ public class OpenSDG {
         public int patch;
 
         Version(long code) {
-            major = (int) ((code >> 24) & 0x0FFFF);
+            major = (int) ((code >> 32) & 0x0FFFF);
             minor = (int) ((code >> 16) & 0x0FFFF);
             patch = (int) (code & 0x0FFFF);
         }
@@ -74,7 +74,7 @@ public class OpenSDG {
         return get_result_str(res.ordinal());
     }
 
-    public Version GetVersion() {
+    public static Version GetVersion() {
         return new Version(get_version());
     }
 }
