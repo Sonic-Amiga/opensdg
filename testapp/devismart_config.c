@@ -34,7 +34,7 @@ static char *jsonstrdup(const char *json, jsmntok_t *tok)
  * to an already running installation.
  * Communication here is done in JSON and is pretty self-explanatory.
  */
-static const char *user_name = "DEVIComm test";
+static const char *user_name = "OpenSDG test";
 
 static int devismart_request_configuration(osdg_connection_t connection)
 {

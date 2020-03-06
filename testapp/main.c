@@ -462,12 +462,16 @@ osdg_connection_t get_grid_connection(void)
 int main(int argc, const char *const *argv)
 {
   unsigned int logmask = OSDG_LOG_ERRORS;
+  struct osdg_version ver;
   osdg_key_t clientKey;
   int i;
   osdg_result_t r;
 
   /* This switches off DOS compatibility mode on Windows console */
   setlocale(LC_ALL, "");
+
+  osdg_get_version(&ver);
+  printf("Using libopensdg v%u.%u.%u\n", ver.major, ver.minor, ver.patch); 
 
   for (i = 1; i < argc; i++)
   {
