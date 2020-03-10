@@ -306,7 +306,8 @@ void connection_read_data(struct _osdg_connection *conn)
     ret = receive_packet(conn);
     if (ret)
     {
-        LOG(ERRORS, "Connection %p died", conn);
+        LOG(ERRORS, "Conn[%p] died: %s system code %d", conn,
+            osdg_get_result_str(conn->errorKind), conn->errorCode);
         connection_terminate(conn, osdg_error);
     }
 }
