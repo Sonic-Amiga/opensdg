@@ -459,6 +459,30 @@ osdg_connection_t get_grid_connection(void)
     return client;
 }
 
+static void grid_control(char* argStr)
+{
+    const char* action = getWord(&argStr);
+    osdg_result_t res;
+
+    if (!strcmp(action, "connect"))
+    {
+        res = osdg_connect_to_danfoss(client);
+    }
+    else if (!strcmp(action, "disconnect"))
+    {
+        res = osdg_connection_close(client);
+    }
+    else
+    {
+        printf("Invalid subcommand %s\n", action);
+        return;
+    }
+
+    if (res != osdg_no_error)
+        print_client_error(client);
+}
+
+
 int main(int argc, const char *const *argv)
 {
   unsigned int logmask = OSDG_LOG_ERRORS;
@@ -558,6 +582,7 @@ int main(int argc, const char *const *argv)
         printf("help                       - this help\n"
                 "close [connection #]       - close a connection\n"
                 "connect [peer # or ID]     - connect to peer by index or raw ID\n"
+                "grid [connect|disconnect]  - manually control grid connection\n"
                 "list pairings              - list known pairings\n"
                 "list peers                 - list current connections\n"
                 "pair [OTP]                 - pair with the given OTP\n"
@@ -578,6 +603,10 @@ int main(int argc, const char *const *argv)
     else if (!strcmp(cmd, "close"))
     {
         close_connection(p);
+    }
+    else if (!strcmp(cmd, "grid"))
+    {
+        grid_control(p);
     }
     else if (!strcmp(cmd, "list"))
     {
