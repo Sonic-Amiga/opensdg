@@ -41,7 +41,7 @@ osdg_result_t osdg_connect_to_remote(osdg_connection_t grid, osdg_connection_t p
 {
   int ret;
   
-  if (connection_in_use(peer))
+  if ((grid->state != osdg_connected) || connection_in_use(peer))
     return osdg_wrong_state;
 
   ret = connection_init(peer);
@@ -202,7 +202,7 @@ osdg_result_t osdg_pair_remote(osdg_connection_t grid, osdg_connection_t peer, c
     int len = 0;
     int ret;
 
-    if (connection_in_use(peer))
+    if ((grid->state != osdg_connected) || connection_in_use(peer))
         return osdg_wrong_state;
 
     /* We're reusing peer->protocol for OTP storage.

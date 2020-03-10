@@ -330,7 +330,8 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
   res = osdg_set_receive_data_callback(peer, receiveFunc);
   if (res)
   {
-      printf("Failed to set data receive callback!\n");
+      printf("Failed to set data receive callback: ");
+      print_result(res);
       osdg_connection_destroy(peer);
       return;
   }
@@ -338,7 +339,8 @@ static void connect_to_peer(osdg_connection_t client, char *argStr)
   res = osdg_connect_to_remote(client, peer, peerId, arg);
   if (res)
   {
-    printf("Failed to start connection!\n");
+    printf("Failed to start connection: ");
+    print_result(res);
     osdg_connection_destroy(peer);
     return;
   }
@@ -364,7 +366,8 @@ static void pair_remote_peer(osdg_connection_t client, char *argStr)
   res = osdg_pair_remote(client, peer, otp);
   if (res != osdg_no_error)
   {
-      printf("Failed to start connection!\n");
+      printf("Failed to start connection: ");
+      print_result(res);
       osdg_connection_destroy(peer);
       return;
   }
