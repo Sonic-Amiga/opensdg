@@ -1,7 +1,3 @@
-set(LIBRARY_MAJOR 1)
-set(LIBRARY_MINOR 0)
-set(LIBRARY_PATCH 0)
-
 # Unfortunately Windows doesn't have centralized source package management
 # like pkg-config
 if (MSVC)
@@ -51,6 +47,15 @@ set(LIBRARY_SOURCES client.c client.h logging.c logging.h
 					pthread_wrapper.h)
 set(PROTOBUF_SOURCES control_protocol.pb-c.c control_protocol.pb-c.h)
 
+file(STRINGS version.h VERSION)
+foreach(PART ${VERSION})
+  separate_arguments(PART)
+  list(GET PART 1 VAR)
+  list(GET PART 2 VAL)
+  set(${VAR} ${VAL})
+endforeach(PART)
+message ("Library version: ${OSDG_MAJOR}.${OSDG_MINOR}.${OSDG_PATCH}")
+
 if (WIN32)
   set(SYSDEP_SOURCES mainloop_win32.c)
 else (WIN32)
@@ -70,8 +75,8 @@ else (STATIC_BUILD)
 endif (STATIC_BUILD)
 target_include_directories(opensdg PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(opensdg PRIVATE ${SODIUM} ${PROTOBUF} PUBLIC ${EXTRA_LIBS})
-set_target_properties(opensdg PROPERTIES VERSION ${LIBRARY_MAJOR}.${LIBRARY_MINOR}.${LIBRARY_PATCH}
-                                         SOVERSION ${LIBRARY_MAJOR})
+set_target_properties(opensdg PROPERTIES VERSION ${OSDG_MAJOR}.${OSDG_MINOR}.${OSDG_PATCH}
+                                         SOVERSION ${OSDG_MAJOR})
 
 if (NOT ${SODIUM_ROOT} STREQUAL "")
   target_include_directories(opensdg PRIVATE ${SODIUM_ROOT}/include)
