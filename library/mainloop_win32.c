@@ -60,7 +60,7 @@ int mainloop_add_connection(struct _osdg_connection *conn)
     if (e == NULL)
     {
         conn->errorKind = osdg_socket_error;
-        conn->errorCode = sockerrno();
+        conn->errorCode = WSAGetLastError();
         return -1;
     }
 

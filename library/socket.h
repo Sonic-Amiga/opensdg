@@ -5,8 +5,6 @@
 
 #include <WinSock2.h>
 
-int sockerrno(void);
-
 #else
 
 #include <arpa/inet.h>
@@ -24,11 +22,6 @@ static inline int closesocket(int s)
 static inline int ioctlsocket(int s, unsigned long request, unsigned long *arg)
 {
     return ioctl(s, request, arg);
-}
-
-static inline int sockerrno(void)
-{
-    return errno;
 }
 
 #endif

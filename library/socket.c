@@ -3,85 +3,14 @@
 #include "socket.h"
 
 #ifdef _WIN32
-
 #include <WS2tcpip.h>
-
-int sockerrno(void)
-{
-    int wsaErr = WSAGetLastError();
-
-    switch (wsaErr)
-    {
-    case WSAEWOULDBLOCK:
-        return EWOULDBLOCK;
-    case WSAEINTR:
-        return EINTR;
-    case WSAEINPROGRESS:
-        return EINPROGRESS;             
-    case WSAENOTSOCK:
-        return ENOTSOCK;
-    case WSAEDESTADDRREQ:
-        return EDESTADDRREQ;
-    case WSAEMSGSIZE:
-        return EMSGSIZE;
-    case WSAEPROTOTYPE:
-        return EPROTOTYPE;
-    case WSAENOPROTOOPT:
-        return ENOPROTOOPT;
-    case WSAEPROTONOSUPPORT:
-        return EPROTONOSUPPORT;
-    case WSAEOPNOTSUPP:
-        return EOPNOTSUPP;
-    case WSAEAFNOSUPPORT:
-        return EAFNOSUPPORT;
-    case WSAEADDRINUSE:
-        return EADDRINUSE;
-    case WSAEADDRNOTAVAIL:
-        return EADDRNOTAVAIL;
-    case WSAENETDOWN:
-        return ENETDOWN;
-    case WSAENETUNREACH:
-        return ENETUNREACH;
-    case WSAENETRESET:
-        return ENETRESET;
-    case WSAECONNABORTED:
-        return ECONNABORTED;
-    case WSAECONNRESET:
-        return ECONNRESET;
-    case WSAENOBUFS:
-        return ENOBUFS;
-    case WSAEISCONN:
-        return EISCONN;
-    case WSAENOTCONN:
-        return ENOTCONN;
-    case WSAETIMEDOUT:
-        return ETIMEDOUT;
-    case WSAECONNREFUSED:
-        return ECONNREFUSED;
-    case WSAELOOP:
-        return ELOOP;
-    case WSAENAMETOOLONG:
-        return ENAMETOOLONG;
-    case WSAEHOSTUNREACH:
-        return EHOSTUNREACH;
-    case WSAENOTEMPTY:
-        return ENOTEMPTY;
-    default:
-        return wsaErr;
-    }
-}
-
 #else
-
 #include <netdb.h>
 
-#endif
+#define WSAEWOULDBLOCK EWOULDBLOCK
+#define WSAEINTR EINTR
 
-static inline void set_socket_error(struct _osdg_connection *client)
-{
-    client->errorKind = osdg_socket_error;
-    client->errorCode = sockerrno();
-}
+#endif
 
 int connect_to_host(struct _osdg_connection *client, const char *host, unsigned short port)
 {
@@ -117,7 +46,8 @@ int connect_to_host(struct _osdg_connection *client, const char *host, unsigned 
         s = socket(addr->sa_family, SOCK_STREAM, 0);
         if (s == -1)
         {
-            set_socket_error(client);
+            client->errorKind = osdg_socket_error;
+            client->errorCode = WSAGetLastError();
             LOG(ERRORS, "Failed to open socket for AF %d", addr->sa_family);
             res = -1;
             break;
@@ -129,11 +59,14 @@ int connect_to_host(struct _osdg_connection *client, const char *host, unsigned 
             static unsigned long nonblock = 1;
  
             LOG(CONNECTION, "Connected to %s:%u", host, port);
-#ifndef _WIN32 /* TODO: Move to UNIX mainloop */
+#ifndef _WIN32
+            /* Unnecessary for Win32 because attaching WSAEvent automatically
+               makes the socket non-blocking */
             res = ioctlsocket(s, FIONBIO, &nonblock);
             if (res)
             {
-                set_socket_error(client);
+                client->errorKind = osdg_socket_error;
+                client->errorCode = errno;
                 LOG(ERRORS, "Failed to set non-blocking mode");
                 closesocket(s);
                 break; /* It's a serious error, will return -1 */
@@ -173,9 +106,9 @@ int receive_data(struct _osdg_connection *client)
                        client->bytesLeft, 0);
         if (ret < 0)
         {
-            int err = sockerrno();
+            int err = WSAGetLastError();
 
-            if (err == EWOULDBLOCK)
+            if (err == WSAEWOULDBLOCK)
                 return 0; /* Need more data */
 
             client->errorKind = osdg_socket_error;
@@ -207,14 +140,14 @@ osdg_result_t send_data(const unsigned char *buffer, int size, struct _osdg_conn
         {
             fd_set wfds;
 
-            if (sockerrno() != EWOULDBLOCK)
+            if (WSAGetLastError() != WSAEWOULDBLOCK)
                 return osdg_socket_error;
 
             FD_ZERO(&wfds);
             FD_SET(client->sock, &wfds);
 
             ret = select((int)client->sock + 1, NULL, &wfds, NULL, NULL);
-            if (ret < 0 && sockerrno() != EINTR)
+            if (ret < 0 && WSAGetLastError() != WSAEINTR)
                 return osdg_socket_error;
         }
         else
