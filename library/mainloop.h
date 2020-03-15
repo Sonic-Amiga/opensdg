@@ -21,7 +21,8 @@ void mainloop_shutdown(void);
 void mainloop_client_event(void);
 int mainloop_add_connection(struct _osdg_connection *conn);
 void mainloop_remove_connection(struct _osdg_connection *conn);
-int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount);
+timestamp_t mainloop_ping(struct _osdg_connection** connList, unsigned int connCount);
+int mainloop_calc_timeout(timestamp_t nextPing);
 
 const struct osdg_main_loop_callbacks *main_cb;
 

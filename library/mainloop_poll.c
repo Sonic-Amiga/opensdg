@@ -64,11 +64,13 @@ int mainloop_add_connection(struct _osdg_connection *conn)
 
 static void *osdg_main(void *arg)
 {
-    int timeout = -1;
+    timestamp_t nextPing = TS_NEVER;
+
     main_loop_start_cb();
 
     for (;;)
     {
+        int timeout = mainloop_calc_timeout(nextPing);
         int r = poll(events, num_connections + 1, timeout);
 
         if (r > 0)
@@ -88,7 +90,7 @@ static void *osdg_main(void *arg)
                         mainloop_handle_client_requests();
 
                         /* Ping interval for some connections could have been changed */
-                        timeout = mainloop_ping(connections, num_connections);
+                        nextPing = mainloop_ping(connections, num_connections);
                     }
                     else
                     {
@@ -106,7 +108,7 @@ static void *osdg_main(void *arg)
         }
         else if (r == 0)
         {
-            timeout = mainloop_ping(connections, num_connections);
+            nextPing = mainloop_ping(connections, num_connections);
         }
         else if (r == -1 && errno != EINTR && errno != EAGAIN)
         {

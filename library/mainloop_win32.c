@@ -75,12 +75,13 @@ int mainloop_add_connection(struct _osdg_connection *conn)
 
 static DWORD WINAPI osdg_main(void *arg)
 {
-    DWORD timeout = WSA_INFINITE;
+    timestamp_t nextPing = TS_NEVER;
 
     main_loop_start_cb();
 
     for (;;)
     {
+        DWORD timeout = mainloop_calc_timeout(nextPing);
         DWORD r = WSAWaitForMultipleEvents(num_connections + 1, events, FALSE, timeout, FALSE);
 
         if (r == WSA_WAIT_EVENT_0)
@@ -94,7 +95,7 @@ static DWORD WINAPI osdg_main(void *arg)
                 break;
 
             /* Ping interval for some connections could have been changed */
-            timeout = mainloop_ping(connections, num_connections);
+            nextPing = mainloop_ping(connections, num_connections);
         }
         else if (r > WSA_WAIT_EVENT_0 && r <= WSA_WAIT_EVENT_0 + num_connections)
         {
@@ -106,7 +107,7 @@ static DWORD WINAPI osdg_main(void *arg)
         }
         else if (r == WSA_WAIT_TIMEOUT)
         {
-            timeout = mainloop_ping(connections, num_connections);
+            nextPing = mainloop_ping(connections, num_connections);
         }
         else if (r == WSA_WAIT_FAILED)
         {

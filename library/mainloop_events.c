@@ -77,11 +77,11 @@ void mainloop_handle_client_requests(void)
     }
 }
 
-int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount)
+timestamp_t mainloop_ping(struct _osdg_connection **connList, unsigned int connCount)
 {
     unsigned int i;
-    unsigned long long sleepUntil = -1LL;
-    unsigned long long now;
+
+    timestamp_t sleepUntil = TS_NEVER;
 
     for (i = 0; i < connCount; i++)
     {
@@ -101,7 +101,7 @@ int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount)
                 connection_terminate(conn, osdg_error);
                 /* connection_terminate() modifies connections array.
                  * The main loop will refresh itself and call us again */
-                return 0;
+                return TS_NOW;
             }
         }
 
@@ -110,9 +110,22 @@ int mainloop_ping(struct _osdg_connection **connList, unsigned int connCount)
             sleepUntil = nextPing;
     }
 
-    if (sleepUntil == -1LL)
-        return -1;
+    return sleepUntil;
+}
 
-    now = timestamp();
-    return sleepUntil > now ? (int)(sleepUntil - now) : 0;
+int mainloop_calc_timeout(timestamp_t sleepUntil)
+{
+    if (sleepUntil == TS_NEVER)
+    {
+        return -1;
+    }
+    else if (sleepUntil == TS_NOW)
+    {
+        return 0;
+    }
+    else
+    {
+        timestamp_t now = timestamp();
+        return sleepUntil > now ? (int)(sleepUntil - now) : 0;
+    }
 }

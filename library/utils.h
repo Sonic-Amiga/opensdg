@@ -90,11 +90,15 @@ static inline struct list_element *list_tail(struct list *l)
     return l->tail->prev ? l->tail : NULL;
 }
 
+typedef unsigned long long timestamp_t;
+
+#define TS_NOW 0
+#define TS_NEVER -1LL
 #define MILLISECONDS_PER_SECOND 1000
 
 #ifdef _WIN32
 
-static unsigned long long timestamp(void)
+static timestamp_t timestamp(void)
 {
     return GetTickCount64();
 }
@@ -103,7 +107,7 @@ static unsigned long long timestamp(void)
 
 #include <time.h>
 
-static unsigned long long timestamp(void)
+static timestamp_t timestamp(void)
 {
     struct timespec ts;
 
