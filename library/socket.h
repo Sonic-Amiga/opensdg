@@ -24,6 +24,11 @@ static inline int ioctlsocket(int s, unsigned long request, unsigned long *arg)
     return ioctl(s, request, arg);
 }
 
+static inline int WSAGetLastError(void)
+{
+    return errno;
+}
+
 #endif
 
 int connect_to_host(struct _osdg_connection *client, const char *host, unsigned short port);
