@@ -241,10 +241,18 @@ JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1result_1str(JNIEnv *env,
 
 JNIEXPORT jstring JNICALL Java_org_opensdg_OpenSDG_get_1last_1result_1str(JNIEnv *env, jclass cl, jlong conn)
 {
-    char buffer[1024];
+    size_t len = osdg_get_last_result_str((osdg_connection_t)(uintptr_t)conn, NULL, 0);
+    char *buffer = malloc(len);
+    jstring ret;
 
-    osdg_get_last_result_str((osdg_connection_t)(uintptr_t)conn, buffer, sizeof(buffer));
-    return (*env)->NewStringUTF(env, buffer);
+    /* We should never hit this */
+    if (!buffer)
+        return (*env)->NewStringUTF(env, "String buffer allocation failed");
+
+    osdg_get_last_result_str((osdg_connection_t)(uintptr_t)conn, buffer, len);       
+    ret = (*env)->NewStringUTF(env, buffer);
+    free(buffer);
+    return ret;
 }
 
 JNIEXPORT jlong JNICALL Java_org_opensdg_OpenSDG_get_1version(JNIEnv* env, jclass cl)
@@ -253,5 +261,5 @@ JNIEXPORT jlong JNICALL Java_org_opensdg_OpenSDG_get_1version(JNIEnv* env, jclas
 
     osdg_get_version(&ver);
     /* I am so lazy to write proper marshalling via properties... ;) */
-    return (((jlong)ver.major) << 32) | (ver.minor << 16) | ver.patch;
+    return ((jlong)ver.major << 32) | ((jlong)ver.minor << 16) | ver.patch;
 }

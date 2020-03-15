@@ -271,6 +271,10 @@ size_t osdg_get_last_result_str(osdg_connection_t conn, char *buffer, size_t len
         strncpy(buffer, res, len);
     }
 
+    /* Make sure NULL terminator is there */
+    if (buffer)
+        buffer[len - 1] = 0;
+
     return rl;
 }
 

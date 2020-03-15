@@ -53,12 +53,20 @@ void print_result(osdg_result_t res)
     printf("%s\n", osdg_get_result_str(res));
 }
 
-void print_client_error(osdg_connection_t client)
+void print_client_error(osdg_connection_t conn)
 {
-  char buffer[1024];
+  size_t len = osdg_get_last_result_str(conn, NULL, 0);
+  char* buffer = malloc(len);
 
-  osdg_get_last_result_str(client, buffer, sizeof(buffer));
+  if (!buffer)
+  {
+    printf("Failed to allocate result string!\n");
+    return;
+  }
+
+  osdg_get_last_result_str(conn, buffer, len);
   printf("%s\n", buffer);
+  free(buffer);
 }
 
 const char *getWord(char **p)
