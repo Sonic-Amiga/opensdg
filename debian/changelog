@@ -1,3 +1,10 @@
+opensdg (1.0.2-1) unstable; urgency=medium
+
+  * Fixed grid ping, does not drop connections any more
+  * Improved error handling
+
+ -- Pavel Fedin <pavel_fedin@mail.ru>  Sun, 03 May 2020 15:54:00 +0300
+
 opensdg (1.0.1-1) unstable; urgency=medium
 
   * Fixed freezing in osdg_pair_remote()
