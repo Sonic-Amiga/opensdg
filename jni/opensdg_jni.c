@@ -1,4 +1,5 @@
 #include <inttypes.h>
+#include <stdlib.h>
 
 #include "org_opensdg_OpenSDG.h"
 #include "opensdg.h"
