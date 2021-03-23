@@ -129,18 +129,24 @@ static osdg_result_t pairing_handle_incoming_packet(struct _osdg_connection *con
         crypto_stream_xor(xor, challenge->Y, sizeof(challenge->Y), challenge->nonce, hash);
         crypto_scalarmult_base(base, conn->beforenmData);
         ret = crypto_scalarmult(p1, xor, base);
-        if (ret)
+        if (ret) {
+            client_put_buffer(conn, mesg);
             return osdg_crypto_core_error;
+        }
 
         randombytes(rnd, sizeof(rnd));
         ret = crypto_scalarmult(response->X, rnd, p1);
-        if (ret)
+        if (ret) {
+            client_put_buffer(conn, mesg);
             return osdg_crypto_core_error;
+        }
 
         /* This is used in both hashing rounds below, avoid copying */
         ret = crypto_scalarmult(&buf[crypto_hash_BYTES], rnd, challenge->X);
-        if (ret)
+        if (ret) {
+            client_put_buffer(conn, mesg);
             return osdg_crypto_core_error;
+        }
 
         crypto_hash(buf, challenge->X, sizeof(challenge->X));
         crypto_hash(hash, buf, sizeof(buf));
