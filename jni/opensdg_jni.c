@@ -126,6 +126,7 @@ static osdg_result_t connection_receive_data(osdg_connection_t conn, const void 
     JNIEnv *env = NULL;
     jobject obj = osdg_get_user_data((osdg_connection_t)(uintptr_t)conn);
     jbyteArray jData;
+    osdg_result_t res;
     static jmethodID mid;
 
     (*jvm)->GetEnv(jvm, (void **)&env, JNI_VERSION_1_4);
@@ -134,7 +135,10 @@ static osdg_result_t connection_receive_data(osdg_connection_t conn, const void 
         mid = GetObjectMethodID(env, obj, "osdg_data_receive_cb", "([B)I");
 
     jData = makeJavaArray(env, data, len);
-    return (*env)->CallIntMethod(env, obj, mid, jData);
+    res = (*env)->CallIntMethod(env, obj, mid, jData);
+    (*env)->DeleteLocalRef(env, jData);
+
+    return res;
 }
 
 JNIEXPORT jlong JNICALL Java_org_opensdg_OpenSDG_connection_1create(JNIEnv *env, jclass cl, jobject jConn)
