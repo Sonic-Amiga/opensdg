@@ -1,3 +1,9 @@
+opensdg (1.0.3-1) unstable; urgency=medium
+
+  * Some memory leaks fixed
+
+ -- Pavel Fedin <pavel_fedin@mail.ru>  Sun, 06 Aug 2021 23:51:00 +0300
+
 opensdg (1.0.2-1) unstable; urgency=medium
 
   * Fixed grid ping, does not drop connections any more
